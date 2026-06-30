@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Trickcal-HUN TAPD 대시보드</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Noto Sans KR',sans-serif;background:#f5f7fa;color:#333;line-height:1.6;font-size:14px}
+.container{max-width:1440px;margin:0 auto;padding:14px 18px}
+.header{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:24px 28px;border-radius:14px;margin-bottom:20px}
+.header h1{font-size:26px;font-weight:700}.header .sub{opacity:.9;font-size:13px;margin-top:3px}
+.header .meta{display:flex;gap:24px;margin-top:12px;font-size:13px;flex-wrap:wrap}
+.header .meta span{background:rgba(255,255,255,.18);padding:5px 14px;border-radius:16px}
+.metrics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:18px}
+.metric-card{background:#fff;border-radius:10px;padding:16px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.06)}
+.metric-card .value{font-size:28px;font-weight:700;color:#1a1a2e}
+.metric-card .label{font-size:12px;color:#666;margin-top:3px}
+.card{background:#fff;border-radius:10px;padding:20px;margin-bottom:14px;box-shadow:0 2px 6px rgba(0,0,0,.06)}
+.card-title{font-size:16px;font-weight:600;color:#1a1a2e;margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid #f0f0f0;display:flex;align-items:center;gap:8px}
+.card-title::before{content:'';width:3px;height:17px;background:linear-gradient(180deg,#667eea,#764ba2);border-radius:2px}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid #f0f0f0}
+th{background:#f8f9fa;font-weight:600;color:#555;font-size:11px}
+tr:hover{background:#f8f9fa}
+td a{color:#667eea;text-decoration:none}td a:hover{text-decoration:underline}
+.tg{display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600}
+.tn{background:#fff3cd;color:#856404}.tp{background:#cce5ff;color:#004085}.tc{background:#e2e3e5;color:#383d41}
+.sf{background:#dc3545;color:#fff}.ss{background:#fd7e14;color:#fff}.sn{background:#6c757d;color:#fff}
+.flt{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px;padding:8px 10px;background:#fff;border-radius:8px;font-size:11px}
+.flt label{font-weight:500;color:#555;white-space:nowrap}
+.flt .chips{display:flex;gap:3px;flex-wrap:wrap}
+.flt .chip{padding:2px 7px;border-radius:9px;font-size:10px;border:1px solid #dee2e6;cursor:pointer;background:#fff;user-select:none}
+.flt .chip.on{background:#667eea;color:#fff;border-color:#667eea}
+.flt .cnt{font-size:11px;color:#999;margin-left:auto}
+.footer{text-align:center;color:#999;font-size:10px;padding:12px}
+.lb{text-align:center;padding:30px;color:#999}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="header">
+<h1>Trickcal-HUN TAPD 대시보드</h1>
+<div class="sub">TAPD API 실시간 · 처리자+참여자+개발자+수정자 · Netlify 24/7</div>
+<div class="meta">
+<span>📅 <span id="lu">로딩중</span></span>
+<span>🔍 HUN <span id="th">0</span>건</span>
+<span>📊 전체 <span id="tb">0</span>건</span>
+</div>
+</div>
+
+<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;padding:6px 10px;background:#fff;border-radius:8px;font-size:11px">
+<span style="color:#666">📡 TAPD</span>
+<button onclick="location.reload()" style="padding:4px 12px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:11px">🔄 수동 업데이트</button>
+<span id="rs" style="color:#999;margin-left:auto;font-size:10px">마지막: -</span>
+</div>
+
+<div class="flt">
+<label>수정 버전:</label>
+<div class="chips" id="vc"></div>
+<label style="margin-left:6px">발견버전:</label>
+<div class="chips" id="dc"></div>
+</div>
+<div class="flt">
+<label>상태:</label>
+<div class="chips" id="sc"></div>
+<label style="margin-left:6px">심각:</label>
+<div class="chips" id="xc"></div>
+<span class="cnt" id="cb">0건</span>
+</div>
+
+<div id="lb" class="lb">📡 데이터 로딩 중...</div>
+<div id="ct"></div>
+
+<div class="card">
+<div class="card-title">📈 일일 버그 추세 (HUN 기준, 최근 30일)</div>
+<div style="padding:8px;background:#f8f9fa;border-radius:8px;"><canvas id="dailyTrend" height="180"></canvas></div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+<div class="card" style="margin:0"><div class="card-title">📊 상태 분포</div><div style="padding:4px;"><canvas id="statusDist" height="180"></canvas></div></div>
+<div class="card" style="margin:0"><div class="card-title">📊 심각도 분포</div><div style="padding:4px;"><canvas id="severeDist" height="180"></canvas></div></div>
+</div>
+
+<div class="footer">TAPD API 실시간 · Trickcal · Netlify 배포 · 24/7 운영</div>
+</div>
+
+<script>
+let HB=[]; // HUN 버그
+let ALL=[]; // 전체 버그
+const FS={ver:new Set(['all']),vr:new Set(['all']),st:new Set(['all']),sv:new Set(['all'])};
+
+const stMap={new:['new'],active:['in_progress','reopened'],done:['resolved','verified'],rejected:['rejected'],suspended:['suspended'],closed:['closed']};
+
+function getSeverityClass(severity){
+  const s=(severity||'').toLowerCase();
+  if(s.includes('fatal')||s.includes('critical'))return'sf';
+  if(s.includes('serious')||s.includes('major'))return'ss';
+  return'sn';
+}
+
+function getStatusClass(status){
+  const s=(status||'').toLowerCase();
+  if(s==='new')return'tn';
+  if(s==='in_progress'||s==='reopened')return'tp';
+  return'tc';
+}
+
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+async function loadData(){
+  try{
+    document.getElementById('rs').textContent='상태: TAPD 데이터 로딩 중...';
+    const response=await fetch('/tapd_data.json?_='+Date.now());
+    if(!response.ok)throw new Error('JSON 로딩 오류: '+response.status);
+    const result=await response.json();
+    
+    if(!result.success&&result.error){
+      throw new Error(result.error);
+    }
+    
+    ALL=result.data||[];
+    
+    // HUN 필터링
+    const hf=['current_owner','reporter','participator','cc','te','de','fixer'];
+    HB=ALL.filter(b=>hf.some(f=>(b[f]||'').includes('HUN')));
+    
+    document.getElementById('lu').textContent=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+    document.getElementById('th').textContent=HB.length;
+    document.getElementById('tb').textContent=ALL.length;
+    document.getElementById('rs').textContent='✅ 완료 ('+new Date().toLocaleTimeString('ko-KR')+')';
+    
+    // 필터 초기화
+    initFilters();
+    
+    document.getElementById('lb').style.display='none';
+    render();
+  }catch(e){
+    document.getElementById('lb').innerHTML='❌ Error: '+e.message+'<br><br><button onclick="loadData()" style="padding:8px 16px;background:#667eea;color:#fff;border:none;border-radius:5px;cursor:pointer">🔄 재시도</button>';
+    document.getElementById('rs').textContent='❌ 실패';
+  }
+}
+
+function initFilters(){
+  // 合入버전 필터
+  const vfSet=new Set();
+  HB.forEach(b=>{if(b.version_fix&&b.version_fix!=='0')vfSet.add(b.version_fix)});
+  let vch='<span class="chip on" data-v="all" data-t="ver">전체</span>';
+  [...vfSet].sort().forEach(v=>{vch+='<span class="chip" data-v="'+esc(v)+'" data-t="ver">'+esc(v)+'</span>'});
+  document.getElementById('vc').innerHTML=vch;
+  
+  // 발견버전 필터
+  const vrSet=new Set();
+  HB.forEach(b=>{if(b.version_report&&b.version_report!=='0')vrSet.add(b.version_report)});
+  let dch='<span class="chip on" data-v="all" data-t="vr">전체</span>';
+  [...vrSet].sort().forEach(v=>{dch+='<span class="chip" data-v="'+esc(v)+'" data-t="vr">'+esc(v)+'</span>'});
+  document.getElementById('dc').innerHTML=dch;
+  
+  // 상태 필터
+  const stLabels={new:'신규',active:'진행중',done:'해결/검증',rejected:'반려',suspended:'보류',closed:'종료'};
+  let sch='<span class="chip on" data-v="all" data-t="st">전체</span>';
+  Object.entries(stLabels).forEach(([k,v])=>{sch+='<span class="chip" data-v="'+k+'" data-t="st">'+v+'</span>'});
+  document.getElementById('sc').innerHTML=sch;
+  
+  // 심각도 필터
+  const xKl={fatal:'치명',serious:'심각',normal:'일반'};
+  let xch='<span class="chip on" data-v="all" data-t="sv">전체</span>';
+  Object.entries(xKl).forEach(([k,v])=>{xch+='<span class="chip" data-v="'+k+'" data-t="sv">'+v+'</span>'});
+  document.getElementById('xc').innerHTML=xch;
+  
+  // 필터 이벤트
+  document.querySelectorAll('.chip').forEach(c=>{
+    c.onclick=function(){
+      const v=this.getAttribute('data-v');
+      const t=this.getAttribute('data-t');
+      const s=FS[t];
+      if(v==='all'){
+        s.clear();s.add('all');
+      }else{
+        s.delete('all');
+        if(s.has(v)){s.delete(v)}else{s.add(v)}
+        if(s.size===0)s.add('all');
+      }
+      document.querySelectorAll('.chip[data-t="'+t+'"]').forEach(x=>{
+        x.classList.toggle('on',s.has(x.getAttribute('data-v')))
+      });
+      render();
+    }
+  });
+}
+
+function render(){
+  let F=HB.filter(b=>{
+    if(!FS.ver.has('all')&&!FS.ver.has(b.version_fix||''))return false;
+    if(!FS.vr.has('all')&&!FS.vr.has(b.version_report||''))return false;
+    if(!FS.st.has('all')){
+      const s=(b.status||'').toLowerCase();
+      let ok=false;
+      for(const x of FS.st){
+        const ms=stMap[x]||[x];
+        if(ms.includes(s)){ok=true;break}
+      }
+      if(!ok)return false;
+    }
+    if(!FS.sv.has('all')){
+      const se=(b.severity||'').toLowerCase();
+      let ok=false;
+      if(FS.sv.has('fatal')&&(se.includes('fatal')||se.includes('critical')))ok=true;
+      if(FS.sv.has('serious')&&(se.includes('serious')||se.includes('major')))ok=true;
+      if(FS.sv.has('normal')&&(se.includes('normal')||se.includes('minor')||se.includes('trivial')))ok=true;
+      if(!ok)return false;
+    }
+    return true;
+  });
+  
+  document.getElementById('cb').textContent=F.length+'건';
+  
+  const act=F.filter(b=>['new','in_progress','reopened'].includes((b.status||'').toLowerCase()));
+  const vfy=F.filter(b=>['resolved','verified'].includes((b.status||'').toLowerCase()));
+  const cls=F.filter(b=>(b.status||'').toLowerCase()==='closed');
+  const fatal=F.filter(b=>{const s=(b.severity||'').toLowerCase();return s.includes('fatal')||s.includes('critical')});
+  const serious=F.filter(b=>{const s=(b.severity||'').toLowerCase();return s.includes('serious')||s.includes('major')});
+  const sev=[...new Set([...fatal,...serious])];
+  
+  let h='<div class="metrics-grid">';
+  h+='<div class="metric-card" style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff"><div style="font-size:28px;font-weight:700">'+F.length+'</div><div style="font-size:12px;opacity:.8">HUN 관련 전체</div></div>';
+  h+='<div class="metric-card" style="background:linear-gradient(135deg,#fa709a,#fee140);color:#fff"><div style="font-size:28px;font-weight:700">'+act.length+'</div><div style="font-size:12px;opacity:.8">미해결</div></div>';
+  h+='<div class="metric-card" style="background:linear-gradient(135deg,#4facfe,#00f2fe);color:#fff"><div style="font-size:28px;font-weight:700">'+vfy.length+'</div><div style="font-size:12px;opacity:.8">검증중</div></div>';
+  h+='<div class="metric-card" style="background:linear-gradient(135deg,#11998e,#38ef7d);color:#fff"><div style="font-size:28px;font-weight:700">'+cls.length+'</div><div style="font-size:12px;opacity:.8">종료 ('+(F.length?Math.round(cls.length/F.length*100):0)+'%)</div></div>';
+  h+='<div class="metric-card" style="background:linear-gradient(135deg,#f093fb,#f5576c);color:#fff"><div style="font-size:28px;font-weight:700">'+sev.length+'</div><div style="font-size:12px;opacity:.8">치명/심각</div></div>';
+  h+='</div>';
+  
+  // 版本별 현황 테이블
+  const vC={};F.forEach(b=>{const v=b.version_fix||'미지정';vC[v]=(vC[v]||0)+1});
+  const vK=Object.keys(vC).sort((a,b)=>{const ma=a.match(/W(\d+)/),mb=b.match(/W(\d+)/);if(ma&&mb)return parseInt(mb[1])-parseInt(ma[1]);return a<b?1:-1});
+  h+='<div class="card"><div class="card-title">📊 버전별 현황</div><div class="tw"><table><tr><th>수정 버전</th><th>전체</th><th>미해결</th><th>검증중</th><th>종료</th><th>완료율</th><th>치명/심각</th></tr>';
+  vK.slice(0,25).forEach(k=>{
+    const a=vC[k];
+    const ac=F.filter(b=>(b.version_fix||'미지정')===k&&act.includes(b)).length;
+    const vv=F.filter(b=>(b.version_fix||'미지정')===k&&vfy.includes(b)).length;
+    const cl=F.filter(b=>(b.version_fix||'미지정')===k&&b.status==='closed').length;
+    const r=a?Math.round((vv+cl)/a*100):100;
+    const svv=F.filter(b=>(b.version_fix||'미지정')===k&&sev.includes(b)).length;
+    h+='<tr style="'+(ac?'background:#fff5f5':r>=100?'background:#f0fff4':'')+'"><td>'+esc(k)+'</td><td>'+a+'</td><td style="color:'+(ac?'#dc3545':'#999')+'">'+(ac||'-')+'</td><td>'+(vv||'-')+'</td><td>'+(cl||'-')+'</td><td><strong>'+r+'%</strong></td><td style="color:'+(svv?'#dc3545':'#999')+'">'+(svv||'-')+'</td></tr>';
+  });
+  h+='</table></div></div>';
+  
+  // 테이블
+  function tbl(items){
+    if(!items.length)return'<div style="padding:16px;text-align:center;color:#999">✅ 없음</div>';
+    const limit=100;
+    const show=items.slice(0,limit);
+    const more=items.length>limit?'<tr><td colspan="8" style="text-align:center;color:#999;padding:8px">... '+(items.length-limit)+'건 더 있음</td></tr>':'';
+    return'<table><tr><th>ID</th><th>제목</th><th>상태</th><th>심각도</th><th>발견버전</th><th>수정버전</th><th>생성일</th><th>생성자</th></tr>'+
+      show.map(b=>{
+        const id=b.id||'';
+        const lk='https://www.tapd.cn/46691872/bugtrace/bugs/view?bug_id='+id;
+        return'<tr><td>'+id.slice(-7)+'</td><td><a href="'+lk+'" target="_blank">'+esc((b.title||'').substring(0,45))+'</a></td>'+
+          '<td><span class="tg '+getStatusClass(b.status)+'">'+esc(b.status||'-')+'</span></td>'+
+          '<td><span class="tg '+getSeverityClass(b.severity)+'">'+esc(b.severity||'-')+'</span></td>'+
+          '<td>'+esc(b.version_report||'-')+'</td><td>'+esc(b.version_fix||'-')+'</td>'+
+          '<td>'+(b.created||'').substring(0,10)+'</td><td>'+esc(b.reporter||'-')+'</td></tr>'
+      }).join('')+more+'</table>';
+  }
+  
+  h+='<div class="card"><div class="card-title">🔴 미해결 Bug ('+act.length+')</div><div class="tw">'+tbl(act)+'</div></div>';
+  h+='<div class="card"><div class="card-title">⚠️ 치명/심각 Bug ('+sev.length+')</div><div class="tw">'+tbl(sev)+'</div></div>';
+  h+='<div class="card"><div class="card-title">⏳ 해결/검증 대기 ('+vfy.length+')</div><div class="tw">'+tbl(vfy)+'</div></div>';
+  
+  document.getElementById('ct').innerHTML=h;
+  drawCharts(F);
+}
+
+function drawCharts(F){
+  if(typeof Chart==='undefined')return;
+  
+  // 일일 트렌드
+  const last30=[];
+  const now=new Date();
+  for(let i=29;i>=0;i--){
+    const d=new Date(now);
+    d.setDate(d.getDate()-i);
+    last30.push(d.toISOString().substring(0,10));
+  }
+  const dayData={};
+  last30.forEach(d=>{dayData[d]={total:0,active:0,closed:0}});
+  F.forEach(b=>{
+    const c=(b.created||'').substring(0,10);
+    if(dayData[c]){
+      dayData[c].total++;
+      const st=(b.status||'').toLowerCase();
+      if(st==='new'||st==='in_progress'||st==='reopened')dayData[c].active++;
+      if(st==='closed')dayData[c].closed++;
+    }
+  });
+  const labels=last30.map(d=>d.substring(5,7)+'/'+d.substring(8,10));
+  const totals=last30.map(d=>dayData[d].total);
+  const actives=last30.map(d=>dayData[d].active);
+  const closeds=last30.map(d=>dayData[d].closed);
+  
+  var ctx1=document.getElementById('dailyTrend');
+  if(ctx1){
+    if(window._dtChart)window._dtChart.destroy();
+    window._dtChart=new Chart(ctx1,{
+      type:'bar',
+      data:{labels:labels,datasets:[
+        {label:'신규',data:totals,backgroundColor:'rgba(102,126,234,.6)',borderColor:'#667eea',borderWidth:.5,borderRadius:2},
+        {label:'미해결',data:actives,backgroundColor:'rgba(250,112,154,.6)',borderColor:'#fa709a',borderWidth:.5,borderRadius:2},
+        {label:'종료',data:closeds,backgroundColor:'rgba(17,153,142,.6)',borderColor:'#11998e',borderWidth:.5,borderRadius:2}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:10},boxWidth:12,usePointStyle:true}}},scales:{x:{grid:{display:false},ticks:{font:{size:8},maxRotation:60,minRotation:60}},y:{beginAtZero:true,ticks:{font:{size:9},stepSize:1}}}}
+    });
+  }
+  
+  // 상태 분포
+  var stCnt={};
+  F.forEach(b=>{const s=(b.status||'').toLowerCase();stCnt[s]=(stCnt[s]||0)+1});
+  var sKl={new:'신규',in_progress:'진행중',reopened:'재오픈',resolved:'해결됨',verified:'검증완료',rejected:'반려',suspended:'보류',closed:'종료'};
+  var stLabels=[],stValues=[];
+  Object.entries(stCnt).sort((a,b)=>b[1]-a[1]).forEach(([k,v])=>{stLabels.push(sKl[k]||k);stValues.push(v)});
+  
+  var ctx2=document.getElementById('statusDist');
+  if(ctx2){
+    if(window._stChart)window._stChart.destroy();
+    window._stChart=new Chart(ctx2,{
+      type:'doughnut',
+      data:{labels:stLabels,datasets:[{data:stValues,backgroundColor:['#667eea','#fa709a','#f093fb','#4facfe','#11998e','#fbc2eb','#fee140','#a18cd1'],borderWidth:1}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:9},boxWidth:10,usePointStyle:true,padding:6}}},cutout:'50%'}
+    });
+  }
+  
+  // 심각도 분포
+  var svCnt={};
+  F.forEach(b=>{
+    const se=(b.severity||'').toLowerCase();
+    if(se.includes('fatal')||se.includes('critical'))svCnt['치명']=(svCnt['치명']||0)+1;
+    else if(se.includes('serious')||se.includes('major'))svCnt['심각']=(svCnt['심각']||0)+1;
+    else svCnt['일반']=(svCnt['일반']||0)+1;
+  });
+  
+  var ctx3=document.getElementById('severeDist');
+  if(ctx3){
+    if(window._svChart)window._svChart.destroy();
+    window._svChart=new Chart(ctx3,{
+      type:'doughnut',
+      data:{labels:Object.keys(svCnt),datasets:[{data:Object.values(svCnt),backgroundColor:['#dc3545','#fd7e14','#6c757d'],borderWidth:1}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:9},boxWidth:10,usePointStyle:true,padding:6}}},cutout:'50%'}
+    });
+  }
+}
+
+// 자동 새로고침 (3시간)
+let sec=10800;
+setInterval(()=>{sec--;if(sec<=0){sec=10800;loadData()}},1000);
+
+// 초기 로드
+loadData();
+</script>
+</body>
+</html>

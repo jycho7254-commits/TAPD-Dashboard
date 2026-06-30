@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>한국 모바일 게임 대시보드</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg0:#0a0a0f;--bg1:#12131a;--bg2:#1a1b26;--border:#2a2b3a;--t1:#e1e2ea;--t2:#6b7a9e;--blue:#3b82f6;--red:#ef4444;--green:#22c55e;--yellow:#f59e0b;--purple:#a855f7;--cyan:#06b6d4;--orange:#f97316}
+body{background:var(--bg0);color:var(--t1);font-family:'Inter',system-ui,sans-serif;min-height:100vh;display:flex}
+.sidebar{width:200px;background:var(--bg1);border-right:1px solid var(--border);padding:20px 0;position:fixed;height:100vh;overflow-y:auto;z-index:10}
+.sb-brand{font-size:14px;font-weight:700;padding:8px 20px;color:var(--blue);display:flex;align-items:center;gap:8px}
+.sb-nav a{display:block;padding:10px 20px;color:var(--t2);text-decoration:none;font-size:13px;font-weight:500;transition:all .15s;border-left:3px solid transparent}
+.sb-nav a:hover,.sb-nav a.active{color:var(--t1);background:rgba(59,130,246,.06);border-left-color:var(--blue)}
+.main{margin-left:200px;flex:1;padding:24px 32px;max-width:1100px}
+.top-bar{display:flex;align-items:center;gap:12px;margin-bottom:28px;flex-wrap:wrap}
+.top-bar h1{font-size:22px;font-weight:700}
+.top-btn{background:var(--bg2);border:1px solid var(--border);color:var(--t2);padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer;transition:all .15s}
+.top-btn:hover{color:var(--t1);border-color:var(--blue)}
+
+/* KPI 카드 */
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin-bottom:32px}
+.kpi{background:var(--bg1);border:1px solid var(--border);border-radius:12px;padding:18px 20px}
+.kpi-label{font-size:12px;color:var(--t2);margin-bottom:6px}
+.kpi-value{font-size:24px;font-weight:700}
+.kpi-delta{font-size:11px;margin-top:4px}
+.kpi-delta.up{color:var(--green)}.kpi-delta.down{color:var(--red)}
+
+/* 섹션 */
+.section{margin-bottom:48px;scroll-margin-top:20px}
+.stitle{font-size:17px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:10px}
+.badge{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600}
+.bg{background:rgba(59,130,246,.1);color:var(--blue)}
+.by{background:rgba(245,158,11,.1);color:var(--yellow)}
+.br{background:rgba(239,68,68,.1);color:var(--red)}
+.bp{background:rgba(168,85,247,.1);color:var(--purple)}
+
+/* 탭 */
+.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.tab{padding:7px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--t2);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s}
+.tab:hover{color:var(--t1);border-color:var(--blue)}.tab.active{color:var(--blue);border-color:var(--blue);background:rgba(59,130,246,.08)}
+
+/* 테이블 */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:10px 12px;color:var(--t2);font-weight:500;border-bottom:1px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:.3px}
+td{padding:10px 12px;border-bottom:1px solid var(--border)}
+.rk{font-weight:700;color:var(--yellow);width:40px}
+.gn{font-weight:600}.gc{color:var(--t2);font-size:12px}.rt{font-weight:600}
+.ct{font-size:10px;padding:3px 8px;border-radius:6px;font-weight:600}
+.c0{background:rgba(107,122,158,.12);color:var(--t2)}.c1{background:rgba(59,130,246,.12);color:var(--blue)}
+.c2{background:rgba(168,85,247,.12);color:var(--purple)}.c3{background:rgba(245,158,11,.12);color:var(--yellow)}
+.c4{background:rgba(34,197,94,.12);color:var(--green)}
+
+/* 여론 바 */
+.sbar{width:80px;height:6px;border-radius:3px;overflow:hidden;display:inline-flex;vertical-align:middle;margin-right:6px}
+.pos{background:var(--green)}.neu{background:var(--t2)}.neg{background:var(--red)}
+
+/* 여론 분석 카드 */
+.sent-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
+.sent-card{background:var(--bg1);border:1px solid var(--border);border-radius:12px;padding:18px}
+.sent-card-header{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.sent-rank{font-weight:700;color:var(--yellow);font-size:14px}
+.sent-name{font-weight:600;font-size:14px;flex:1}
+.sent-badge{font-size:10px;padding:2px 8px;border-radius:6px;font-weight:600}
+.sent-badge.kr{background:rgba(59,130,246,.12);color:var(--blue)}
+.sent-badge.gl{background:rgba(168,85,247,.12);color:var(--purple)}
+.sent-tabs{display:flex;gap:6px;margin-bottom:12px}
+.sent-tab{padding:4px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;font-size:11px;color:var(--t2);cursor:pointer;transition:all .15s}
+.sent-tab:hover,.sent-tab.active{color:var(--blue);border-color:var(--blue)}
+.sent-comm-panel{display:none}
+.sent-comm-panel[data-comm="DC"]{display:block}
+.sent-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.sent-label{font-size:11px;font-weight:500;width:55px;flex-shrink:0}
+.pos-label{color:var(--green)}.neg-label{color:var(--red)}.neu-label{color:var(--t2)}
+.sent-bar{flex:1;height:6px;background:var(--bg0);border-radius:3px;overflow:hidden}
+.sent-fill{height:100%;border-radius:3px;transition:width .3s}
+.pos-fill{background:var(--green)}.neg-fill{background:var(--red)}.neu-fill{background:var(--t2)}
+.sent-filter-chips{display:flex;gap:6px;margin-bottom:16px}
+.sent-filter-chip{padding:5px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;font-size:11px;color:var(--t2);cursor:pointer;transition:all .15s}
+.sent-filter-chip:hover,.sent-filter-chip.active{color:var(--blue);border-color:var(--blue)}
+
+/* 매출 추이 차트 */
+.chart-wrap{background:var(--bg1);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px}
+.chart-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.chart-title{font-size:14px;font-weight:600}
+.chart-badge{display:flex;gap:6px}
+
+/* 기준 가이드 */
+.guide-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.guide-card{background:var(--bg1);border:1px solid var(--border);border-radius:12px;padding:18px}
+.guide-card h3{font-size:14px;font-weight:600;margin-bottom:12px;color:var(--blue)}
+.guide-card ul{list-style:none;font-size:12px;color:var(--t2)}
+.guide-card li{padding:4px 0;border-bottom:1px solid var(--border)}
+.guide-card li:last-child{border-bottom:none}
+.grade-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+.grade-table th{font-size:11px;padding:6px 10px}.grade-table td{padding:6px 10px}
+
+/* 광고 섹션 */
+.ads-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.ad-card{background:var(--bg1);border:1px solid var(--border);border-radius:12px;padding:18px;position:relative}
+.ad-card h4{font-size:14px;font-weight:600;margin-bottom:8px}
+.ad-card .ad-desc{font-size:12px;color:var(--t2);margin-bottom:12px}
+.ad-card .ad-stat{display:flex;gap:16px;font-size:12px;color:var(--t2);margin-bottom:12px}
+.ad-card .ad-stat strong{color:var(--t1)}
+.ad-btn{display:inline-block;padding:8px 20px;background:var(--blue);color:#fff;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none;transition:all .15s}
+.ad-btn:hover{opacity:.85}
+.ad-card .ad-label{position:absolute;top:10px;right:10px;font-size:10px;color:var(--t2);background:var(--bg0);padding:2px 8px;border-radius:10px}
+
+/* 랭킹 히스토리 정보 */
+.history-info{display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap;font-size:12px;color:var(--t2)}
+.history-info strong{color:var(--t1)}
+
+/* ─── 게임 상세 모달 ─── */
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);z-index:1000;backdrop-filter:blur(4px);justify-content:center;align-items:flex-start;padding:40px 20px;overflow-y:auto}
+.modal-overlay.active{display:flex}
+.modal-box{background:var(--bg1);border:1px solid var(--border);border-radius:16px;width:100%;max-width:900px;max-height:85vh;overflow-y:auto;position:relative;animation:modalIn .25s ease-out}
+@keyframes modalIn{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
+.modal-close{position:absolute;top:16px;right:16px;background:var(--bg2);border:1px solid var(--border);color:var(--t2);width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;z-index:5;transition:all .15s}
+.modal-close:hover{color:var(--red);border-color:var(--red)}
+.modal-header{padding:24px 24px 16px;border-bottom:1px solid var(--border)}
+.modal-header h2{font-size:20px;font-weight:700;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.modal-header h2 .mh-cat{font-size:12px;font-weight:500}
+.modal-header .mh-meta{display:flex;gap:16px;margin-top:8px;font-size:13px;color:var(--t2);flex-wrap:wrap}
+.modal-header .mh-meta strong{color:var(--t1)}
+.modal-body{padding:20px 24px 24px}
+.modal-section{margin-bottom:24px}
+.modal-section:last-child{margin-bottom:0}
+.modal-section-title{font-size:15px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.modal-section-title .badge{font-size:10px}
+.streamer-table{width:100%;border-collapse:collapse;font-size:13px}
+.streamer-table th{text-align:left;padding:10px 12px;color:var(--t2);font-weight:500;border-bottom:1px solid var(--border);font-size:12px;background:var(--bg2)}
+.streamer-table td{padding:10px 12px;border-bottom:1px solid var(--border)}
+.streamer-table tr:hover{background:var(--bg2)}
+.streamer-table .st-name{font-weight:600;color:var(--t1)}
+.streamer-table .st-views{color:var(--blue)}
+.streamer-table .st-likes{color:var(--red)}
+.streamer-table .st-date{color:var(--t2);font-size:11px}
+.sponsor-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600}
+.sponsor-badge.yes{background:rgba(245,158,11,.12);color:var(--yellow)}
+.sponsor-badge.no{background:rgba(107,122,158,.12);color:var(--t2)}
+.sponsor-badge.maybe{background:rgba(59,130,246,.12);color:var(--blue)}
+.modal-vid-item{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px;transition:border-color .15s}
+.modal-vid-item:hover{border-color:var(--blue)}
+.modal-vid-item .mvi-thumb{width:48px;height:48px;border-radius:8px;background:var(--bg0);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.modal-vid-item .mvi-info{flex:1;min-width:0}
+.modal-vid-item .mvi-title{font-size:13px;font-weight:500;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.modal-vid-item .mvi-stats{font-size:11px;color:var(--t2);margin-top:2px}
+.modal-vid-item .mvi-sponsor{flex-shrink:0}
+#gtable tr{cursor:pointer}
+#gtable tr:hover{background:var(--bg2);box-shadow:inset 3px 0 0 var(--blue)}
+
+/* 스크롤바 */
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:var(--bg0)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+
+<!-- 사이드바 -->
+<nav class="sidebar">
+  <div class="sb-brand">📊 GameInsight</div>
+  <div class="sb-nav">
+    <a href="#rank">🏆 매출 순위</a>
+    <a href="#inf">🎮 인플루언서</a>
+    <a href="#sent">💬 여론 분석</a>
+    <a href="#revenue">📈 매출 추이</a>
+    <a href="#criteria">📋 기준 가이드</a>
+    <a href="#ads">💰 유료 광고</a>
+  </div>
+</nav>
+
+<div class="main">
+  <div class="top-bar">
+    <h1>한국 모바일 게임 대시보드</h1>
+    <button class="top-btn" onclick="location.reload()">🔄 새로고침</button>
+    <button class="top-btn">📋 전체 장르</button>
+    <button class="top-btn">🇰🇷 한국</button>
+    <button class="top-btn">📱 Google Play</button>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <!-- 매출 순위 -->
+  <div class="section" id="rank">
+    <div class="stitle">🏆 구글플레이 매출 Top 50 <span class="badge bg">50개</span> <span class="badge by">2026-07-01</span></div>
+    <div class="tabs" id="gt">
+      <div class="tab active" onclick="filterCat('all',this)">전체</div>
+      MMORPG
+RPG
+서바이벌
+퍼즐
+메타버스
+방치형 RPG
+보드
+스포츠
+액션
+육성
+전략
+카드
+타워 디펜스
+합성
+    </div>
+    <table><thead><tr><th>#</th><th>게임</th><th>개발사</th><th>장르</th><th>⭐ 평점</th><th>여론</th></tr></thead><tbody id="gtable"></tbody></table>
+  </div>
+
+  <!-- 여론 분석 -->
+  <div class="section" id="sent">
+    <div class="stitle">💬 커뮤니티 여론 분석 <span class="badge bg">상위 10개 게임</span> <span class="badge by">Placeholder</span></div>
+    <div class="sent-filter-chips" id="sent-filters"><button class="sent-filter-chip active" onclick="filterSentiment(this,'all')">전체</button><button class="sent-filter-chip" onclick="filterSentiment(this,'korean')">🇰🇷 한국</button><button class="sent-filter-chip" onclick="filterSentiment(this,'global')">🌍 글로벌</button></div>
+    <div class="sent-grid" id="sent-grid"><div class="sent-card"><div class="sent-card-header"><span class="sent-rank">#1</span><span class="sent-name">SOL: enchant</span><span class="sent-badge kr">한국</span></div><div class="sent-tabs"><div class="sent-tab active" onclick="switchSentTab(this,'DC')">DC인사이드</div><div class="sent-tab" onclick="switchSentTab(this,'arca')">아카라이브</div><div class="sent-tab" onclick="switchSentTab(this,'naver')">네이버 라운지</div></div><div class="sent-comm-content"><div class="sent-comm-panel" data-comm="DC"><div class="sent-bar-row"><span class="sent-label pos-label">긍정 44%</span><div class="sent-bar"><div class="sent-fill pos-fill" style="width:44%"></div></div></div><div class="sent-bar-row"><span class="sent-label neg-label">부정 21%</span><div class="sent-bar"><div class="sent-fill neg-fill" style="width:21%"></div></div></div><div class="sent-bar-row"><span class="sent-label neu-label">중립 35%</span><div class="sent-bar"><div class="sent-fill neu-fill" style="width:35%"></div></div></div></div><div class="sent-comm-panel" data-comm="arca"><div class="sent-bar-row"><span class="sent-label pos-label">긍정 39%</span><div class="sent-bar"><div class="sent-fill pos-fill" style="width:39%"></div></div></div><div class="sent-bar-row"><span class="sent-label neg-label">부정 25%</span><div class="sent-bar"><div class="sent-fill neg-fill" style="width:25%"></div></div></div><div class="sent-bar-row"><span class="sent-label neu-label">중립 36%</span><div class="sent-bar"><div class="sent-fill neu-fill" style="width:36%"></div></div></div></div><div class="sent-comm-panel" data-comm="naver"><div class="sent-bar-row"><span class="sent-label pos-label">긍정 39%</span><div class="sent-bar"><div class="sent-fill pos-fill" style="width:39%"></div></div></div><div class="sent-bar-row"><span class="sent-label neg-label">부정 25%</span><div class="sent-bar"><div class="sent-fill neg-fill" style="width:25%"></div></div></div><div class="sent-bar-row"><span class="sent-label neu-label">중립 36%</span><div class="sent-bar"><div class="sent-fill neu-fill" style="width:36%"></div></div></div></div></div></div><div class="sent-card"><div class="sent-card-header"><span class="sent-rank">#2</span><span class="sent-name">오딘: 발할라 라이징</span><span class="sent-badge kr">한국</span></div><div class="sent-tabs"><div class="sent-tab active" onclick="switchSentTab(this,'DC')">DC인사이드</div><div class="sent-tab" onclick="switchSentTab(this,'arca')">아카라이브</div><div class="sent-tab" onclick="switchSentTab(this,'naver')">네이버 라운지</div></div><div class="sent-comm-content"><div class="sent-comm-panel" data-comm="DC"><div class="sent-bar-row"><span class="sent-label pos-label">긍정 32%</span><div class="sent-bar"><div class="sent-fill pos-fill" style="width:32%"></div></div></div><div class="sent-bar-row"><span class="sent-label neg-label">부정 30%</span><div class="sent-bar"><div class="sent-fill neg-fill" style="width:30%"></div></div></div><div class="sent-bar-row"><span class="sent-label neu-label">중립 38%</span><div class="sent-bar"><div class="sent-fill neu-fill" style="width:38%"></div></div></div></div><div class="sent-comm-panel" data-comm="arca"><div class="sent-bar-row"><span class="sent-label pos-label">긍정 32%</span><div class="sent-bar"><div class="sent-fill pos-fill" style="width:32%"></div></div></div><div class="sent-bar-row"><span class="sent-label neg-label">부정 30%</span><div class="sent-bar"><div class="sent-fill neg-fill" style="width:30%"></div></div></div><div class="sent-bar-row"><span class="sent-label neu-label">중립 38%</span><div class="sent-bar"><div class="sent-fill neu-fill" style="width:38%"></div></div></div></div><div class="sent-comm-panel" data-comm="naver"><div class="sent-bar-row"><span class="sent-label pos-label">긍정 41%</span><div class="sent-bar"><div class="sent-fill pos-fill" style="width:41%"></div></div></div><div class="sent-bar-row"><span class="sent-label neg-label">부정 24%</span><div class="sent-bar"><div class="sent-fill neg-fill" style="width:24%"></div></div></div><div class="sent-bar-row"><span class="sent-label neu-label">중립 35%</span><div class="sent-bar"><div class="sent-fill neu-fill" style="width:35%"></div></div></div></div></div></div><div class="sent-card"><div class="sent-card-header"><span class="sent-rank">#3</span><span class="sent-name">WOS: 화이트아웃 서바이벌</span><span class="sent-badge gl">글로벌</span></div><div class="sent-tabs"><div class="sent-tab active" onclick="switchSentTab(this,'DC')">DC인사이드</div><div class="sent-tab" onclick="switchSentTab(this,'arca')">아카라이브</div><div class="sent-tab" onclick="switchSentTab(this,'naver')">네이버 라운지</div></div><div class="sent-comm-content"><div class="sent-comm-panel" data-comm="DC"><div class="sent-bar-row"><span class="sent-label pos-label">긍정 39%</span><div class="sent-bar"><div class="sent-fill pos-fill" style="width:39%"></div></div></div><div class="sent-bar-row"><span class="sent-label neg-label">부정 25%</span><div class="sent-bar"><div class="sent-fill neg-fill" style="width:25%"></div></div></div><div class="sent-bar-row"><span class="sent-label neu-label">중립 36%</span><div class="sent-bar"><div class="sent-fill neu-fill" style="width:36%"></div></div></div></div><div class="sent-comm-panel" data-comm="arca"><div class="sent-bar-row"><span class="sent-label pos-label">긍정 44%</span><div class="sent-bar"><div class="sent-fill pos-fill" style="width:44%"></div></div></div><div class="sent-bar-row"><span class="sent-label neg-label">부정 21%</span><div class="sent-bar"><div class="sent-fill neg-fill" style="width:21%"></div></div></div><div class="sent-bar-row"><span class="sent-label neu-label">중립 35%</span><div class="sent-bar"><div class="sent-fill neu-fill" style="width:35%"></div></div></div></div><div class="sent-comm-panel" data-comm="naver"><div class="sent-bar-row"><span class="sent-label pos-label">긍정 41%</span><div class="sent-bar"><div class="sent-fill pos-fill" style="width:41%"></div></div></div><div class="sent-bar-row"><span class="sent-label neg-label">부정 23%</span><div class="sent-bar"><div class="sent-fill neg-fill" style="width:23%"></div></div></div><div class="sent-bar-row"><span class="sent-label neu-label">중립 36%</span><div class="sent-bar"><div class="sent-fill neu-fill" style="width:36%"></div></div></div></div></div></div><div class="sent-card"><div class="sent-card-header"><span class="sent-rank">#4</span><span class="sent-name">리니지M</span><span class="sent-badge kr">한국</span></div><div class="sent-tabs"><div class="sent-tab active" onclick="switchSentTab(this,'DC')">DC인사이드</div><div class="sent-tab" onclick="switchSentTab(this,'arca')">아카라이브</div><div class="sent-tab" onclick="switchSentTab(this,'naver')">네이버 라운지</div></div><div class="sent-comm-content"><div class="sent-comm-panel" data-comm="DC"><div class="sent-bar-row"><span class="sent-label pos-label">긍정 30%</span><div class="sent-bar"><div class="sent-fill pos-fill" style="width:30%"></div></div></div><div class="sent-bar-row"><span class="sent-label neg-label">부정 31%</span><div class="sent-bar"><div class="sent-fill neg-fill" style="width:31%"></div></div></div><div class="sent-bar-row"><span class="sent-label neu-label">중립 39%</span><div class="sent-bar"><div class="sent-fill neu-fill" style="width:39%"></div></div></div></div><div class="sent-comm-panel" data-comm="arca"><div class="sent-bar-row"><span class="sent-label pos-label">긍정 35%</span><div class="sent-bar"><div class="sent-fill pos-fill" style="width:35%"></div></div></div><div class="sent-bar-row"><span class="sent-label neg-label">부정 28%</span><div class="sent-bar"><div class="sent-fill neg-fill" style="width:28%"></div></div></div><div class="sent-bar-row"><span class="sent-label neu-label">중립 37%</span><div class="sent-bar"><div class="sent-fill neu-fill" style="width:37%"></div></div></div></div><div class="sent-comm-panel" data-comm="naver"><div class="sent-bar-row"><span class="sent-label pos-label">긍정 41%</span><div class="sent-bar"><div class="sent-fill pos-fill" style="width:41%"></div></div></div><div class="sent-bar-row"><span class="sent-label neg-label">부정 23%</span><div class="sent-bar"><div class="sent-fill neg-fill" style="width:23%"></div></div></div><div class="sent-bar-row"><span class="sent-label neu-label">중립 36%</span><div class="sent-bar"><div class="sent-fill neu-fill" style="width:36%"></div></div></div></div></div></div><div class="sent-card"><div class="sent-card-header"><span class="sent-rank">#5</span><span class="sent-name">킹샷:Kingshot</span><span class="sent-badge gl">글로벌</span></div><div class="sent-tabs"><div class="sent-tab active" onclick="switchSentTab(this,'DC')">DC인사이드</div><div class="sent-tab" onclick="switchSentTab(this,'arca')">아카라이브</div><div class="sent-tab" onclick="switchSentTab(this,'naver')">네이버 라운지</div></div><div class="sent-comm-content"><div class="sent-comm-panel" data-comm="DC"><div class="sent-bar-row"><span class="sent-label pos-label">긍정 45%</span><div class="sent-bar"><div class="sent-fill pos-fill" style="width:45%"></div></div></div><div class="sent-bar-row"><span class="sent-label neg-label">부정 20%</span><div class="sent-bar"><div class="sent-fill neg-fill" style="width:20%"></div></div></div><div class="sent-bar-row"><span class="sent-label neu-label">중립 35%</span><div class="sent-bar"><div class="sent-fill neu-fill" style="width:35%"></div></div></div></div><div class="sent-comm-panel" data-comm="arca"><div class="sent-bar-row"><span class="sent-label pos-label">긍정 39%</span><div class="sent-bar"><div class="sent-fill pos-fill" style="width:39%"></div></div></div><div class="sent-bar-row"><span class="sent-label neg-label">부정 25%</span><div class="sent-bar"><div class="sent-fill neg-fill" style="width:25%"></div></div></div><div class="sent-bar-row"><span class="sent-label neu-label">중립 36%</span><div class="sent-bar"><div class="sent-fill neu-fill" style="width:36%"></div></div></div></div><div class="sent-comm-panel" data-comm="naver"><div class="sent-bar-row"><span class="sent-label pos-label">긍정 42%</span><div class="sent-bar"><div class="sent-fill pos-fill" style="width:42%"></div></div></div><div class="sent-bar-row"><span class="sent-label neg-label">부정 23%</span><div class="sent-bar"><div class="sent-fill neg-fill" style="width:23%"></div></div></div><div class="sent-bar-row"><span class="sent-label neu-label">중립 35%</span><div class="sent-bar"><div class="sent-fill neu-fill" style="width:35%"></div></div></div></div></div></div><div class="sent-card"><div class="sent-card-header"><span class="sent-rank">#6</span><span class="sent-name">마비노기 모바일</span><span class="sent-badge kr">한국</span></div><div class="sent-tabs"><div class="sent-tab active" onclick="switchSentTab(this,'DC')">DC인사이드</div><div class="sent-tab" onclick="switchSentTab(this,'arca')">아카라이브</div><div class="sent-tab" onclick="switchSentTab(this,'naver')">네이버 라운지</div></div><div class="sent-comm-content"><div class="sent-comm-panel" data-comm="DC"><div class="sent-bar-row"><span class="sent-label pos-label">긍정 42%</span><div class="sent-bar"><div class="sent-fill pos-fill" style="width:42%"></div></div></div><div class="sent-bar-row"><span class="sent-label neg-label">부정 23%</span><div class="sent-bar"><div class="sent-fill neg-fill" style="width:23%"></div></div></div><div class="sent-bar-row"><span class="sent-label neu-label">중립 35%</span><div class="sent-bar"><div class="sent-fill neu-fill" style="width:35%"></div></div></div></div><div class="sent-comm-panel" data-comm="arca"><div class="sent-bar-row"><span class="sent-label pos-label">긍정 33%</span><div class="sent-bar"><div class="sent-fill pos-fill" style="width:33%"></div></div></div><div class="sent-bar-row"><span class="sent-label neg-label">부정 29%</span><div class="sent-bar"><div class="sent-fill neg-fill" style="width:29%"></div></div></div><div class="sent-bar-row"><span class="sent-label neu-label">중립 38%</span><div class="sent-bar"><div class="sent-fill neu-fill" style="width:38%"></div></div></div></div><div class="sent-comm-panel" data-comm="naver"><div class="sent-bar-row"><span class="sent-label pos-label">긍정 33%</span><div class="sent-bar"><div class="sent-fill pos-fill" style="width:33%"></div></div></div><div class="sent-bar-row"><span class="sent-label neg-label">부정 29%</span><div class="sent-bar"><div class="sent-fill neg-fill" style="width:29%"></div></div></div><div class="sent-bar-row"><span class="sent-label neu-label">중립 38%</span><div class="sent-bar"><div class="sent-fill neu-fill" style="width:38%"></div></div></div></div></div></div><div class="sent-card"><div class="sent-card-header"><span class="sent-rank">#7</span><span class="sent-name">로얄 매치 Royal Match</span><span class="sent-badge gl">글로벌</span></div><div class="sent-tabs"><div class="sent-tab active" onclick="switchSentTab(this,'DC')">DC인사이드</div><div class="sent-tab" onclick="switchSentTab(this,'arca')">아카라이브</div><div class="sent-tab" onclick="switchSentTab(this,'naver')">네이버 라운지</div></div><div class="sent-comm-content"><div class="sent-comm-panel" data-comm="DC"><div class="sent-bar-row"><span class="sent-label pos-label">긍정 45%</span><div class="sent-bar"><div class="sent-fill pos-fill" style="width:45%"></div></div></div><div class="sent-bar-row"><span class="sent-label neg-label">부정 20%</span><div class="sent-bar"><div class="sent-fill neg-fill" style="width:20%"></div></div></div><div class="sent-bar-row"><span class="sent-label neu-label">중립 35%</span><div class="sent-bar"><div class="sent-fill neu-fill" style="width:35%"></div></div></div></div><div class="sent-comm-panel" data-comm="arca"><div class="sent-bar-row"><span class="sent-label pos-label">긍정 42%</span><div class="sent-bar"><div class="sent-fill pos-fill" style="width:42%"></div></div></div><div class="sent-bar-row"><span class="sent-label neg-label">부정 23%</span><div class="sent-bar"><div class="sent-fill neg-fill" style="width:23%"></div></div></div><div class="sent-bar-row"><span class="sent-label neu-label">중립 35%</span><div class="sent-bar"><div class="sent-fill neu-fill" style="width:35%"></div></div></div></div><div class="sent-comm-panel" data-comm="naver"><div class="sent-bar-row"><span class="sent-label pos-label">긍정 44%</span><div class="sent-bar"><div class="sent-fill pos-fill" style="width:44%"></div></div></div><div class="sent-bar-row"><span class="sent-label neg-label">부정 21%</span><div class="sent-bar"><div class="sent-fill neg-fill" style="width:21%"></div></div></div><div class="sent-bar-row"><span class="sent-label neu-label">중립 35%</span><div class="sent-bar"><div class="sent-fill neu-fill" style="width:35%"></div></div></div></div></div></div><div class="sent-card"><div class="sent-card-header"><span class="sent-rank">#8</span><span class="sent-name">메이플 키우기</span><span class="sent-badge kr">한국</span></div><div class="sent-tabs"><div class="sent-tab active" onclick="switchSentTab(this,'DC')">DC인사이드</div><div class="sent-tab" onclick="switchSentTab(this,'arca')">아카라이브</div><div class="sent-tab" onclick="switchSentTab(this,'naver')">네이버 라운지</div></div><div class="sent-comm-content"><div class="sent-comm-panel" data-comm="DC"><div class="sent-bar-row"><span class="sent-label pos-label">긍정 33%</span><div class="sent-bar"><div class="sent-fill pos-fill" style="width:33%"></div></div></div><div class="sent-bar-row"><span class="sent-label neg-label">부정 30%</span><div class="sent-bar"><div class="sent-fill neg-fill" style="width:30%"></div></div></div><div class="sent-bar-row"><span class="sent-label neu-label">중립 37%</span><div class="sent-bar"><div class="sent-fill neu-fill" style="width:37%"></div></div></div></div><div class="sent-comm-panel" data-comm="arca"><div class="sent-bar-row"><span class="sent-label pos-label">긍정 40%</span><div class="sent-bar"><div class="sent-fill pos-fill" style="width:40%"></div></div></div><div class="sent-bar-row"><span class="sent-label neg-label">부정 24%</span><div class="sent-bar"><div class="sent-fill neg-fill" style="width:24%"></div></div></div><div class="sent-bar-row"><span class="sent-label neu-label">중립 36%</span><div class="sent-bar"><div class="sent-fill neu-fill" style="width:36%"></div></div></div></div><div class="sent-comm-panel" data-comm="naver"><div class="sent-bar-row"><span class="sent-label pos-label">긍정 39%</span><div class="sent-bar"><div class="sent-fill pos-fill" style="width:39%"></div></div></div><div class="sent-bar-row"><span class="sent-label neg-label">부정 25%</span><div class="sent-bar"><div class="sent-fill neg-fill" style="width:25%"></div></div></div><div class="sent-bar-row"><span class="sent-label neu-label">중립 36%</span><div class="sent-bar"><div class="sent-fill neu-fill" style="width:36%"></div></div></div></div></div></div><div class="sent-card"><div class="sent-card-header"><span class="sent-rank">#9</span><span class="sent-name">라스트 워: 서바이벌</span><span class="sent-badge gl">글로벌</span></div><div class="sent-tabs"><div class="sent-tab active" onclick="switchSentTab(this,'DC')">DC인사이드</div><div class="sent-tab" onclick="switchSentTab(this,'arca')">아카라이브</div><div class="sent-tab" onclick="switchSentTab(this,'naver')">네이버 라운지</div></div><div class="sent-comm-content"><div class="sent-comm-panel" data-comm="DC"><div class="sent-bar-row"><span class="sent-label pos-label">긍정 37%</span><div class="sent-bar"><div class="sent-fill pos-fill" style="width:37%"></div></div></div><div class="sent-bar-row"><span class="sent-label neg-label">부정 27%</span><div class="sent-bar"><div class="sent-fill neg-fill" style="width:27%"></div></div></div><div class="sent-bar-row"><span class="sent-label neu-label">중립 36%</span><div class="sent-bar"><div class="sent-fill neu-fill" style="width:36%"></div></div></div></div><div class="sent-comm-panel" data-comm="arca"><div class="sent-bar-row"><span class="sent-label pos-label">긍정 42%</span><div class="sent-bar"><div class="sent-fill pos-fill" style="width:42%"></div></div></div><div class="sent-bar-row"><span class="sent-label neg-label">부정 23%</span><div class="sent-bar"><div class="sent-fill neg-fill" style="width:23%"></div></div></div><div class="sent-bar-row"><span class="sent-label neu-label">중립 35%</span><div class="sent-bar"><div class="sent-fill neu-fill" style="width:35%"></div></div></div></div><div class="sent-comm-panel" data-comm="naver"><div class="sent-bar-row"><span class="sent-label pos-label">긍정 42%</span><div class="sent-bar"><div class="sent-fill pos-fill" style="width:42%"></div></div></div><div class="sent-bar-row"><span class="sent-label neg-label">부정 23%</span><div class="sent-bar"><div class="sent-fill neg-fill" style="width:23%"></div></div></div><div class="sent-bar-row"><span class="sent-label neu-label">중립 35%</span><div class="sent-bar"><div class="sent-fill neu-fill" style="width:35%"></div></div></div></div></div></div><div class="sent-card"><div class="sent-card-header"><span class="sent-rank">#10</span><span class="sent-name">가십하버: 합성 & 스토리 게임</span><span class="sent-badge gl">글로벌</span></div><div class="sent-tabs"><div class="sent-tab active" onclick="switchSentTab(this,'DC')">DC인사이드</div><div class="sent-tab" onclick="switchSentTab(this,'arca')">아카라이브</div><div class="sent-tab" onclick="switchSentTab(this,'naver')">네이버 라운지</div></div><div class="sent-comm-content"><div class="sent-comm-panel" data-comm="DC"><div class="sent-bar-row"><span class="sent-label pos-label">긍정 38%</span><div class="sent-bar"><div class="sent-fill pos-fill" style="width:38%"></div></div></div><div class="sent-bar-row"><span class="sent-label neg-label">부정 26%</span><div class="sent-bar"><div class="sent-fill neg-fill" style="width:26%"></div></div></div><div class="sent-bar-row"><span class="sent-label neu-label">중립 36%</span><div class="sent-bar"><div class="sent-fill neu-fill" style="width:36%"></div></div></div></div><div class="sent-comm-panel" data-comm="arca"><div class="sent-bar-row"><span class="sent-label pos-label">긍정 36%</span><div class="sent-bar"><div class="sent-fill pos-fill" style="width:36%"></div></div></div><div class="sent-bar-row"><span class="sent-label neg-label">부정 27%</span><div class="sent-bar"><div class="sent-fill neg-fill" style="width:27%"></div></div></div><div class="sent-bar-row"><span class="sent-label neu-label">중립 37%</span><div class="sent-bar"><div class="sent-fill neu-fill" style="width:37%"></div></div></div></div><div class="sent-comm-panel" data-comm="naver"><div class="sent-bar-row"><span class="sent-label pos-label">긍정 32%</span><div class="sent-bar"><div class="sent-fill pos-fill" style="width:32%"></div></div></div><div class="sent-bar-row"><span class="sent-label neg-label">부정 30%</span><div class="sent-bar"><div class="sent-fill neg-fill" style="width:30%"></div></div></div><div class="sent-bar-row"><span class="sent-label neu-label">중립 38%</span><div class="sent-bar"><div class="sent-fill neu-fill" style="width:38%"></div></div></div></div></div></div></div>
+  </div>
+
+  <!-- 매출 추이 (랭킹 히스토리 기반) -->
+  <div class="section" id="revenue">
+    <div class="stitle">📈 매출 순위 변화 추이 <span class="badge bg">Top 10</span> <span class="badge bp">순위 기반</span></div>
+    <div class="history-info" id="historyInfo"></div>
+    <div class="chart-wrap">
+      <div class="chart-header">
+        <div class="chart-title">📊 일별 랭킹 변화 (순위 ↓=매출↑)</div>
+        <div class="chart-badge">
+          <span class="badge by" id="historyDays"></span>
+        </div>
+      </div>
+      <canvas id="rankChart" height="300"></canvas>
+    </div>
+    <div style="font-size:11px;color:var(--t2);padding:8px;background:var(--bg1);border:1px solid var(--border);border-radius:8px">
+      📊 랭킹 = 매출 proxy | 순위가 낮을수록 매출 높음 (y축 반전) | 매일 00:40 자동 수집 | 데이터: 32일
+    </div>
+  </div>
+
+  <!-- 기준 가이드 -->
+  <div class="section" id="criteria">
+    <div class="stitle">📋 평점 · 여론 기준 가이드 <span class="badge bp">참고용</span></div>
+    <div class="guide-grid">
+      <div class="guide-card">
+        <h3>⭐ 평점 기준</h3>
+        <table class="grade-table">
+          <thead><tr><th>등급</th><th>평점</th><th>평가</th></tr></thead>
+          <tbody>
+            <tr><td style="color:var(--green);font-weight:700">S</td><td>4.5+</td><td>매우 우수</td></tr>
+            <tr><td style="color:var(--blue);font-weight:700">A</td><td>4.0~4.4</td><td>우수</td></tr>
+            <tr><td style="color:var(--yellow);font-weight:700">B</td><td>3.5~3.9</td><td>보통</td></tr>
+            <tr><td style="color:var(--orange);font-weight:700">C</td><td>3.0~3.4</td><td>미흡</td></tr>
+            <tr><td style="color:var(--red);font-weight:700">D</td><td>2.9-</td><td>위험</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="guide-card">
+        <h3>💬 여론 분석 기준</h3>
+        <ul>
+          <li><strong style="color:var(--green)">긍정 (Positive)</strong> — 게임 칭찬, 추천, 재미 언급, 캐릭터/그래픽 감탄</li>
+          <li><strong style="color:var(--red)">부정 (Negative)</strong> — 불만, 비판, 과금 유도, 버그, 운영 비판</li>
+          <li><strong style="color:var(--t2)">중립 (Neutral)</strong> — 정보 전달, 질문, 자료 공유, 객관적 의견</li>
+        </ul>
+        <div style="margin-top:12px;font-size:11px;color:var(--t2)">⚠️ 현재 더미 데이터 기반 — 실제 크롤링 연동 시 교체 예정</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 유료 광고 -->
+  <div class="section" id="ads">
+    <div class="stitle">💰 스트리머 유료 광고 <span class="badge by">Placeholder</span></div>
+    <div class="ads-grid">
+      <div class="ad-card"><div class="ad-label">준비 중</div><h4>📺 스트리머 광고 분석</h4><div class="ad-desc">게임별 스트리머 유료 광고 현황을 분석합니다.<br>매출 순위에서 게임을 클릭하면 상세 모달을 확인할 수 있습니다.</div><div class="ad-stat"><span>분석 대상: <strong>Top 20</strong></span><span>스트리머: <strong>38명</strong></span></div><a href="#rank" class="ad-btn">🏆 매출 순위로 이동</a></div>
+      <div class="ad-card"><div class="ad-label">Placeholder</div><h4>🔍 광고 효과 분석</h4><div class="ad-desc">스트리머 광고 전후 랭킹 변화를 분석합니다.<br>데이터 축적 후 자동 분석 예정.</div><div class="ad-stat"><span>히스토리: <strong>32일</strong></span><span>대시보드: <strong>활성</strong></span></div><span class="badge bp" style="margin-top:12px;display:inline-block">데이터 축적 중</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- 게임 상세 모달 -->
+<div class="modal-overlay" id="gameModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeGameModal()">✕</button>
+    <div class="modal-header">
+      <h2 id="modalTitle">게임명</h2>
+      <div class="mh-meta" id="modalMeta"></div>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+// ─── 매출 순위 테이블 ───
+const games=[{"rank": 1, "name": "SOL: enchant", "company": "Netmarble", "rating": 2.25, "category": "MMORPG", "package": "com.netmarble.sol", "url": "https://play.google.com/store/apps/details?id=com.netmarble.sol", "estimated_revenue": null}, {"rank": 2, "name": "오딘: 발할라 라이징", "company": "Kakao Games Corp.", "rating": 4.55, "category": "MMORPG", "package": "com.kakaogames.odin", "url": "https://play.google.com/store/apps/details?id=com.kakaogames.odin", "estimated_revenue": null}, {"rank": 3, "name": "WOS: 화이트아웃 서바이벌", "company": "Century Games PTE. LTD.", "rating": 4.46, "category": "서바이벌", "package": "com.gof.global", "url": "https://play.google.com/store/apps/details?id=com.gof.global", "estimated_revenue": null}, {"rank": 4, "name": "리니지M", "company": "NC Corporation", "rating": 2.61, "category": "MMORPG", "package": "com.ncsoft.lineagem19", "url": "https://play.google.com/store/apps/details?id=com.ncsoft.lineagem19", "estimated_revenue": null}, {"rank": 5, "name": "킹샷:Kingshot", "company": "Century Games PTE. LTD.", "rating": 4.58, "category": "타워 디펜스", "package": "com.run.tower.defense", "url": "https://play.google.com/store/apps/details?id=com.run.tower.defense", "estimated_revenue": null}, {"rank": 6, "name": "마비노기 모바일", "company": "NEXON Company", "rating": 2.51, "category": "RPG", "package": "com.nexon.devcat.mm", "url": "https://play.google.com/store/apps/details?id=com.nexon.devcat.mm", "estimated_revenue": null}, {"rank": 7, "name": "로얄 매치 Royal Match", "company": "Dream Games, Ltd.", "rating": 4.61, "category": "퍼즐", "package": "com.dreamgames.royalmatch", "url": "https://play.google.com/store/apps/details?id=com.dreamgames.royalmatch", "estimated_revenue": null}, {"rank": 8, "name": "메이플 키우기", "company": "NEXON Company", "rating": 4.34, "category": "방치형 RPG", "package": "com.nexon.ma", "url": "https://play.google.com/store/apps/details?id=com.nexon.ma", "estimated_revenue": null}, {"rank": 9, "name": "라스트 워: 서바이벌", "company": "FUNFLY PTE. LTD.", "rating": 4.81, "category": "서바이벌", "package": "com.fun.lastwar.gp", "url": "https://play.google.com/store/apps/details?id=com.fun.lastwar.gp", "estimated_revenue": null}, {"rank": 10, "name": "가십하버: 합성 & 스토리 게임", "company": "Microfun Limited", "rating": 4.41, "category": "합성", "package": "com.mergegames.gossipharbor", "url": "https://play.google.com/store/apps/details?id=com.mergegames.gossipharbor", "estimated_revenue": null}, {"rank": 11, "name": "로블록스 (Roblox)", "company": "Roblox Corporation", "rating": 3.75, "category": "메타버스", "package": "com.roblox.client", "url": "https://play.google.com/store/apps/details?id=com.roblox.client", "estimated_revenue": null}, {"rank": 12, "name": "명조:워더링 웨이브 × 사이버펑크 콜라보", "company": "HK KURO GAMES LIMITED", "rating": 4.65, "category": "RPG", "package": "com.kurogame.wutheringwaves.global", "url": "https://play.google.com/store/apps/details?id=com.kurogame.wutheringwaves.global", "estimated_revenue": null}, {"rank": 13, "name": "승리의 여신: 니케", "company": "Level Infinite", "rating": 4.83, "category": "RPG", "package": "com.proximabeta.nikke", "url": "https://play.google.com/store/apps/details?id=com.proximabeta.nikke", "estimated_revenue": null}, {"rank": 14, "name": "운빨존많겜", "company": "111%", "rating": 4.35, "category": "액션", "package": "com.percent.aos.luckydefense", "url": "https://play.google.com/store/apps/details?id=com.percent.aos.luckydefense", "estimated_revenue": null}, {"rank": 15, "name": "Limbus Company", "company": "Project Moon", "rating": 4.52, "category": "RPG", "package": "com.ProjectMoon.LimbusCompany", "url": "https://play.google.com/store/apps/details?id=com.ProjectMoon.LimbusCompany", "estimated_revenue": null}, {"rank": 16, "name": "트릭컬 리바이브", "company": "EPIDGames", "rating": 4.8, "category": "RPG", "package": "com.epidgames.trickcalrevive", "url": "https://play.google.com/store/apps/details?id=com.epidgames.trickcalrevive", "estimated_revenue": null}, {"rank": 17, "name": "씨사이드 익스케이프: 합성 & 스토리 게임", "company": "Microfun Limited", "rating": 4.4, "category": "합성", "package": "com.gamedots.seasideescape", "url": "https://play.google.com/store/apps/details?id=com.gamedots.seasideescape", "estimated_revenue": null}, {"rank": 18, "name": "라스트 Z: 서바이벌 슈터", "company": "Omnilojo Pte Ltd", "rating": 4.76, "category": "서바이벌", "package": "com.readygo.barrel.gp", "url": "https://play.google.com/store/apps/details?id=com.readygo.barrel.gp", "estimated_revenue": null}, {"rank": 19, "name": "라스트 어사일럼: 페스트", "company": "37GAMES GLOBAL", "rating": 4.87, "category": "액션", "package": "com.phs.global", "url": "https://play.google.com/store/apps/details?id=com.phs.global", "estimated_revenue": null}, {"rank": 20, "name": "꿈의 정원 (Gardenscapes)", "company": "Playrix", "rating": 4.71, "category": "퍼즐", "package": "com.playrix.gardenscapes", "url": "https://play.google.com/store/apps/details?id=com.playrix.gardenscapes", "estimated_revenue": null}, {"rank": 21, "name": "토이 삼국", "company": "Rhinos", "rating": 4.82, "category": "전략", "package": "com.jsjskr.google", "url": "https://play.google.com/store/apps/details?id=com.jsjskr.google", "estimated_revenue": null}, {"rank": 22, "name": "한게임 포커", "company": "NHN Corp.", "rating": 4.34, "category": "보드", "package": "com.nhnent.Qpoker", "url": "https://play.google.com/store/apps/details?id=com.nhnent.Qpoker", "estimated_revenue": null}, {"rank": 23, "name": "테이스티 트레블: 합성 게임", "company": "Century Games PTE. LTD.", "rating": 4.83, "category": "합성", "package": "com.fatmerge.global", "url": "https://play.google.com/store/apps/details?id=com.fatmerge.global", "estimated_revenue": null}, {"rank": 24, "name": "우마무스메 프리티 더비", "company": "Kakao Games Corp.", "rating": 4.48, "category": "육성", "package": "com.kakaogames.umamusume", "url": "https://play.google.com/store/apps/details?id=com.kakaogames.umamusume", "estimated_revenue": null}, {"rank": 25, "name": "로얄 킹덤 (Royal Kingdom)", "company": "Dream Games, Ltd.", "rating": 4.6, "category": "퍼즐", "package": "com.dreamgames.royalkingdom", "url": "https://play.google.com/store/apps/details?id=com.dreamgames.royalkingdom", "estimated_revenue": null}, {"rank": 26, "name": "한게임포커 클래식 : 7포커 홀덤 섯다 훌라 슬롯", "company": "NHN Corp.", "rating": 4.52, "category": "보드", "package": "com.nhnent.pokerclassic", "url": "https://play.google.com/store/apps/details?id=com.nhnent.pokerclassic", "estimated_revenue": null}, {"rank": 27, "name": "소녀전선2: 망명", "company": "HaoPlay Limited", "rating": 4.28, "category": "RPG", "package": "com.haoplay.game.and.exilium", "url": "https://play.google.com/store/apps/details?id=com.haoplay.game.and.exilium", "estimated_revenue": null}, {"rank": 28, "name": "컴투스프로야구V26", "company": "Com2uS", "rating": 4.5, "category": "스포츠", "package": "com.com2us.futurecpb.android.google.global.normal", "url": "https://play.google.com/store/apps/details?id=com.com2us.futurecpb.android.google.global.normal", "estimated_revenue": null}, {"rank": 29, "name": "냥코 대전쟁", "company": "PONOS Corporation", "rating": 4.14, "category": "타워 디펜스", "package": "jp.co.ponos.battlecatskr", "url": "https://play.google.com/store/apps/details?id=jp.co.ponos.battlecatskr", "estimated_revenue": null}, {"rank": 30, "name": "젠레스 존 제로", "company": "COGNOSPHERE PTE. LTD.", "rating": 3.32, "category": "RPG", "package": "com.HoYoverse.Nap", "url": "https://play.google.com/store/apps/details?id=com.HoYoverse.Nap", "estimated_revenue": null}, {"rank": 31, "name": "세븐나이츠 리버스", "company": "Netmarble", "rating": 3.95, "category": "RPG", "package": "com.netmarble.tskgb", "url": "https://play.google.com/store/apps/details?id=com.netmarble.tskgb", "estimated_revenue": null}, {"rank": 32, "name": "리니지W", "company": "NC Corporation", "rating": 3.73, "category": "MMORPG", "package": "com.ncsoft.lineagew", "url": "https://play.google.com/store/apps/details?id=com.ncsoft.lineagew", "estimated_revenue": null}, {"rank": 33, "name": "FC 모바일", "company": "NEXON Company", "rating": 3.06, "category": "스포츠", "package": "com.nexon.fmk", "url": "https://play.google.com/store/apps/details?id=com.nexon.fmk", "estimated_revenue": null}, {"rank": 34, "name": "드래곤빌리지3", "company": "highbrow", "rating": 4.81, "category": "육성", "package": "com.highbrow.games.dvo", "url": "https://play.google.com/store/apps/details?id=com.highbrow.games.dvo", "estimated_revenue": null}, {"rank": 35, "name": "뱀피르", "company": "Netmarble", "rating": 4.31, "category": "RPG", "package": "com.netmarble.thered", "url": "https://play.google.com/store/apps/details?id=com.netmarble.thered", "estimated_revenue": null}, {"rank": 36, "name": "EA SPORTS FC Online M", "company": "NEXON Company", "rating": 2.26, "category": "스포츠", "package": "com.nexon.fo4m", "url": "https://play.google.com/store/apps/details?id=com.nexon.fo4m", "estimated_revenue": null}, {"rank": 37, "name": "뮤 모나크2", "company": "Webzen Inc.", "rating": 4.18, "category": "MMORPG", "package": "com.webzen.mumonarch2.google", "url": "https://play.google.com/store/apps/details?id=com.webzen.mumonarch2.google", "estimated_revenue": null}, {"rank": 38, "name": "S.O.S: 스테이트 오브 서바이벌", "company": "FunPlus International AG", "rating": 4.43, "category": "서바이벌", "package": "com.kingsgroup.sos", "url": "https://play.google.com/store/apps/details?id=com.kingsgroup.sos", "estimated_revenue": null}, {"rank": 39, "name": "I9: 인페르노 나인", "company": "Leniu Technology Co., Limited", "rating": 4.54, "category": "RPG", "package": "com.kr.firegp", "url": "https://play.google.com/store/apps/details?id=com.kr.firegp", "estimated_revenue": null}, {"rank": 40, "name": "이환", "company": "N2E", "rating": 4.63, "category": "RPG", "package": "com.hottagames.nte", "url": "https://play.google.com/store/apps/details?id=com.hottagames.nte", "estimated_revenue": null}, {"rank": 41, "name": "협타디: 협동 타워 디펜스", "company": "Supermagic", "rating": 4.59, "category": "타워 디펜스", "package": "com.percent.aos.cooptd", "url": "https://play.google.com/store/apps/details?id=com.percent.aos.cooptd", "estimated_revenue": null}, {"rank": 42, "name": "붕괴: 스타레일", "company": "COGNOSPHERE PTE. LTD.", "rating": 3.68, "category": "RPG", "package": "com.HoYoverse.hkrpgoversea", "url": "https://play.google.com/store/apps/details?id=com.HoYoverse.hkrpgoversea", "estimated_revenue": null}, {"rank": 43, "name": "캔디크러쉬사가 (Candy Crush Saga)", "company": "King", "rating": 4.56, "category": "퍼즐", "package": "com.king.candycrushsaga", "url": "https://play.google.com/store/apps/details?id=com.king.candycrushsaga", "estimated_revenue": null}, {"rank": 44, "name": "브롤스타즈", "company": "Supercell", "rating": 3.7, "category": "액션", "package": "com.supercell.brawlstars", "url": "https://play.google.com/store/apps/details?id=com.supercell.brawlstars", "estimated_revenue": null}, {"rank": 45, "name": "탑 히어로즈", "company": "RiverGame", "rating": 4.81, "category": "RPG", "package": "com.greenmushroom.boomblitz.gp", "url": "https://play.google.com/store/apps/details?id=com.greenmushroom.boomblitz.gp", "estimated_revenue": null}, {"rank": 46, "name": "레이븐2", "company": "Netmarble", "rating": 4.12, "category": "RPG", "package": "com.netmarble.raven2", "url": "https://play.google.com/store/apps/details?id=com.netmarble.raven2", "estimated_revenue": null}, {"rank": 47, "name": "핫레스토랑: 머지&쿠킹", "company": "Microfun Limited", "rating": 4.79, "category": "합성", "package": "com.cola.game", "url": "https://play.google.com/store/apps/details?id=com.cola.game", "estimated_revenue": null}, {"rank": 48, "name": "호드 워:어벤저의 소환", "company": "JoyTogether Games", "rating": 4.77, "category": "전략", "package": "com.mymskr.gp", "url": "https://play.google.com/store/apps/details?id=com.mymskr.gp", "estimated_revenue": null}, {"rank": 49, "name": "Disney Solitaire", "company": "SuperPlay.", "rating": 4.79, "category": "카드", "package": "com.superplaystudios.disneysolitairedreams", "url": "https://play.google.com/store/apps/details?id=com.superplaystudios.disneysolitairedreams", "estimated_revenue": null}, {"rank": 50, "name": "꿈의 집 (Homescapes)", "company": "Playrix", "rating": 4.67, "category": "퍼즐", "package": "com.playrix.homescapes", "url": "https://play.google.com/store/apps/details?id=com.playrix.homescapes", "estimated_revenue": null}];
+function cc(c){return{MMORPG:'c1',RPG:'c2','퍼즐':'c3','서바이벌':'c4'}[c]||'c0'}
+function render(f){const d=f==='all'?games:games.filter(g=>g.category===f);document.getElementById('gtable').innerHTML=d.map(g=>{const s=.3+Math.random()*.5,p=Math.round(s*40+20),n=Math.round((1-s)*30+10),ne=100-p-n;return'<tr onclick="openGameModal('+g.rank+')"><td class="rk">'+g.rank+'</td><td><div class="gn">'+g.name+' <span style="font-size:10px;color:var(--blue)">🔍</span></div></td><td class="gc">'+g.company+'</td><td><span class="ct '+cc(g.category)+'">'+g.category+'</span></td><td class="rt">'+g.rating.toFixed(2)+'</td><td><div class="sbar"><div class="pos" style="width:'+p+'%"></div><div class="neu" style="width:'+ne+'%"></div><div class="neg" style="width:'+n+'%"></div></div><span style="font-size:11px;color:var(--t2)">긍정'+p+'%</span></td></tr>'}).join('')}
+function filterCat(c,el){document.querySelectorAll('#gt .tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');render(c)}
+render('all');
+
+// ─── 여론 분석 탭 전환 ───
+function switchSentTab(el,comm){const tabs=el.parentElement.querySelectorAll('.sent-tab');tabs.forEach(t=>t.classList.remove('active'));el.classList.add('active');const card=el.closest('.sent-card');card.querySelectorAll('.sent-comm-panel').forEach(p=>{p.style.display=p.dataset.comm===comm?'block':'none'})}
+function filterSentiment(el,filter){document.querySelectorAll('#sent-filters .sent-filter-chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');const cards=document.querySelectorAll('.sent-card');cards.forEach(c=>{const badge=c.querySelector('.sent-badge');if(!badge)return;const isKr=badge.classList.contains('kr');if(filter==='all')c.style.display='';else if(filter==='korean')c.style.display=isKr?'':'none';else c.style.display=isKr?'none':''})}
+
+// ─── KPI ───
+(function(){const kr=games.filter(g=>['nc','nexon','netmarble','kakao','com2us','pearl abyss','webzen','smilegate','shift up','valofe','4:33','krafton'].some(k=>(g.company||'').toLowerCase().includes(k))).length;const avgR=(games.reduce((s,g)=>s+g.rating,0)/games.length).toFixed(1);const kpis=[{l:'총 매출 게임',v:games.length+'개',d:'▲ 실시간',u:true},{l:'한국 개발사',v:kr+'개',d:'▲ '+kr+'사',u:true},{l:'글로벌 게임',v:(games.length-kr)+'개',d:'▲ '+(games.length-kr)+'사',u:true},{l:'평균 평점',v:avgR,d:'구글플레이',u:true},{l:'게임 인플루언서',v:'38명',d:'▲ 모니터링',u:true}];document.getElementById('kpis').innerHTML=kpis.map(k=>'<div class="kpi"><div class="kpi-label">'+k.l+'</div><div class="kpi-value">'+k.v+'</div><div class="kpi-delta '+(k.u?'up':'down')+'">'+k.d+'</div></div>').join('')})();
+
+// ─── 매출 추이 차트 (랭킹 히스토리) ───
+(function(){
+  const labels = ["2026-06-01", "2026-06-02", "2026-06-03", "2026-06-04", "2026-06-05", "2026-06-06", "2026-06-07", "2026-06-08", "2026-06-09", "2026-06-10", "2026-06-11", "2026-06-12", "2026-06-13", "2026-06-14", "2026-06-15", "2026-06-16", "2026-06-17", "2026-06-18", "2026-06-19", "2026-06-20", "2026-06-21", "2026-06-22", "2026-06-23", "2026-06-24", "2026-06-25", "2026-06-26", "2026-06-27", "2026-06-28", "2026-06-29", "2026-06-30", "2026-06-30", "2026-07-01"];
+  const datasets = [{"label": "SOL: enchant", "data": [2, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1, 2, 2, 2, 1, 2, 1, 2, 1, 2, 1, 1, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1], "borderColor": "#f59e0b", "backgroundColor": "#f59e0b20", "fill": false, "tension": 0.3, "pointRadius": 2, "pointHoverRadius": 5, "borderWidth": 2}, {"label": "오딘: 발할라 라이징", "data": [1, 1, 3, 3, 1, 2, 3, 1, 3, 3, 3, 2, 1, 2, 1, 2, 2, 1, 2, 1, 2, 3, 2, 2, 3, 1, 3, 2, 3, 2, 2, 2], "borderColor": "#ef4444", "backgroundColor": "#ef444420", "fill": false, "tension": 0.3, "pointRadius": 2, "pointHoverRadius": 5, "borderWidth": 2}, {"label": "WOS: 화이트아웃 서바이벌", "data": [2, 4, 4, 2, 4, 3, 4, 2, 2, 4, 3, 4, 3, 3, 2, 3, 3, 3, 3, 4, 2, 3, 4, 2, 4, 2, 2, 4, 3, 51, 4, 3], "borderColor": "#3b82f6", "backgroundColor": "#3b82f620", "fill": false, "tension": 0.3, "pointRadius": 2, "pointHoverRadius": 5, "borderWidth": 2}, {"label": "리니지M", "data": [5, 3, 5, 5, 3, 4, 4, 5, 4, 5, 3, 3, 3, 3, 4, 4, 3, 5, 4, 4, 4, 3, 4, 4, 5, 5, 3, 4, 5, 4, 5, 4], "borderColor": "#22c55e", "backgroundColor": "#22c55e20", "fill": false, "tension": 0.3, "pointRadius": 2, "pointHoverRadius": 5, "borderWidth": 2}, {"label": "킹샷:Kingshot", "data": [5, 4, 5, 5, 5, 4, 4, 5, 4, 6, 4, 5, 6, 6, 5, 5, 6, 6, 5, 4, 6, 4, 6, 4, 6, 5, 4, 6, 6, 51, 4, 5], "borderColor": "#a855f7", "backgroundColor": "#a855f720", "fill": false, "tension": 0.3, "pointRadius": 2, "pointHoverRadius": 5, "borderWidth": 2}, {"label": "마비노기 모바일", "data": [4, 8, 8, 6, 8, 9, 5, 9, 9, 8, 4, 6, 7, 7, 4, 4, 8, 8, 5, 4, 6, 5, 5, 4, 6, 9, 5, 3, 3, 6, 7, 6], "borderColor": "#06b6d4", "backgroundColor": "#06b6d420", "fill": false, "tension": 0.3, "pointRadius": 2, "pointHoverRadius": 5, "borderWidth": 2}, {"label": "로얄 매치 Royal Match", "data": [5, 5, 8, 4, 7, 7, 7, 6, 7, 5, 4, 4, 4, 9, 10, 4, 9, 10, 9, 10, 9, 10, 4, 10, 8, 5, 8, 6, 4, 51, 8, 7], "borderColor": "#f97316", "backgroundColor": "#f9731620", "fill": false, "tension": 0.3, "pointRadius": 2, "pointHoverRadius": 5, "borderWidth": 2}, {"label": "메이플 키우기", "data": [6, 11, 8, 5, 6, 5, 6, 5, 6, 7, 5, 10, 8, 10, 8, 10, 5, 6, 5, 5, 11, 5, 11, 6, 10, 5, 10, 9, 6, 51, 11, 8], "borderColor": "#ec4899", "backgroundColor": "#ec489920", "fill": false, "tension": 0.3, "pointRadius": 2, "pointHoverRadius": 5, "borderWidth": 2}, {"label": "라스트 워: 서바이벌", "data": [11, 8, 10, 8, 10, 7, 11, 6, 7, 9, 7, 8, 10, 6, 10, 7, 7, 9, 12, 9, 9, 8, 11, 12, 11, 11, 10, 8, 7, 51, 11, 9], "borderColor": "#14b8a6", "backgroundColor": "#14b8a620", "fill": false, "tension": 0.3, "pointRadius": 2, "pointHoverRadius": 5, "borderWidth": 2}, {"label": "가십하버: 합성 & 스토리 게임", "data": [7, 7, 10, 13, 8, 10, 12, 9, 13, 7, 10, 8, 11, 13, 11, 9, 8, 7, 8, 7, 10, 9, 10, 12, 8, 13, 11, 9, 13, 51, 13, 10], "borderColor": "#6366f1", "backgroundColor": "#6366f120", "fill": false, "tension": 0.3, "pointRadius": 2, "pointHoverRadius": 5, "borderWidth": 2}];
+  
+  // 히스토리 정보
+  document.getElementById('historyInfo').innerHTML = 
+    '<span>📅 기간: <strong>' + (labels[0]||'-') + ' ~ ' + (labels[labels.length-1]||'-') + '</strong></span>' +
+    '<span>📊 데이터: <strong>' + labels.length + '일</strong></span>' +
+    '<span>🎮 추적 게임: <strong>' + datasets.length + '개</strong></span>';
+  document.getElementById('historyDays').textContent = labels.length + '일 데이터';
+  
+  if(labels.length < 2){
+    document.getElementById('revenue').querySelector('.chart-wrap').innerHTML = 
+      '<div style="padding:40px;text-align:center;color:var(--t2)">데이터 2일 이상 축적되면 차트가 표시됩니다.<br>현재 ' + labels.length + '일 데이터</div>';
+    return;
+  }
+  
+  const ctx = document.getElementById('rankChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { 
+          position: 'bottom', 
+          labels: { color: '#6b7a9e', font: { size: 10 }, boxWidth: 12, padding: 12 }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) {
+              const rank = ctx.raw;
+              if(rank > 50) return ctx.dataset.label + ': 순위권 밖';
+              return ctx.dataset.label + ': ' + rank + '위';
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          reverse: true,
+          min: 1,
+          max: 50,
+          title: { display: true, text: '매출 순위 (↑=매출↑)', color: '#6b7a9e', font: { size: 11 } },
+          ticks: { color: '#6b7a9e', stepSize: 10 },
+          grid: { color: 'rgba(42,43,58,.5)' }
+        },
+        x: {
+          title: { display: true, text: '날짜', color: '#6b7a9e', font: { size: 11 } },
+          ticks: { color: '#6b7a9e', maxRotation: 45, maxTicksLimit: 15 },
+          grid: { color: 'rgba(42,43,58,.3)' }
+        }
+      }
+    }
+  });
+})();
+
+// ─── 사이드바 스크롤 활성 ───
+const sections=document.querySelectorAll('.section');
+const obs=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){const id=e.target.id;document.querySelectorAll('.sb-nav a').forEach(a=>{a.classList.toggle('active',a.getAttribute('href')==='#'+id)})}})},{threshold:.3});
+sections.forEach(sec=>observer.observe(sec));
+sections.forEach(sec => obs.observe(sec));
+
+// ─── 게임 상세 모달 ───
+const influencersData = [{"platform": "YouTube", "channel_name": "T1", "followers": 6900000, "live_viewers": 5000, "category": "e스포츠", "recent_videos": [{"title": "페이커의 우르프 초대장", "views": 3432739, "likes": null, "date": null}, {"title": "페이커가 애착 인형을 만드는 법", "views": 1753670, "likes": null, "date": null}, {"title": "T1 뗏목 캡틴 페이커", "views": 818429, "likes": null, "date": null}]}, {"platform": "YouTube", "channel_name": "감스트", "followers": 5700000, "live_viewers": 15000, "category": "게임 실황/엔터테인먼트", "recent_videos": [{"title": "감스트 너 납치된 거야 GTA5", "views": 2770312, "likes": null, "date": null}, {"title": "감스트 GTA5 맞다이로 들어와", "views": 1815512, "likes": null, "date": null}, {"title": "감스트 GTA5 세상에 나쁜 개는 없다", "views": 1686905, "likes": null, "date": null}, {"title": "감스트 GTA5 초전도체 오토바이", "views": 1502872, "likes": null, "date": null}, {"title": "What happens when GAMST plays Euro Truck Simulator", "views": 1480965, "likes": null, "date": null}]}, {"platform": "YouTube", "channel_name": "Faker (T1)", "followers": 5000000, "live_viewers": 20000, "category": "e스포츠", "recent_videos": [{"title": "4대 5를 이긴다고? 페이커의 레전드 아리", "views": 2192163, "likes": null, "date": null}, {"title": "국가권력급 페이커 요네", "views": 1852180, "likes": null, "date": null}, {"title": "페이커의 어몽어스 하이드 온 벤트", "views": 1749587, "likes": null, "date": null}, {"title": "돌아온 그림자의 주인", "views": 1224137, "likes": null, "date": null}, {"title": "페이커의 미드 세라핀 두두등장", "views": 989759, "likes": null, "date": null}]}, {"platform": "YouTube", "channel_name": "김블루", "followers": 4900000, "live_viewers": 8000, "category": "게임 실황/엔터테인먼트", "recent_videos": [{"title": "걷기만 해도 웃긴 게임이 존재합니다 레전드", "views": 2654777, "likes": null, "date": null}, {"title": "가장 멍청한 펭귄으로 3천명을 웃긴게임 (펭귄 GTA)", "views": 1747753, "likes": null, "date": null}, {"title": "해외에서 5천만뷰 나온 편의점 경영게임 버러지특공대", "views": 1295183, "likes": null, "date": null}, {"title": "말하는 가면 얼굴을 찢어버리는 괴물 SCP 공포게임", "views": 874982, "likes": null, "date": null}, {"title": "친구마저 버려야 1등하는 온갖반칙 인성게임 폴가이즈 fall guys", "views": 864404, "likes": null, "date": null}]}, {"platform": "YouTube", "channel_name": "침착맨", "followers": 4800000, "live_viewers": 10000, "category": "게임 실황/엔터테인먼트", "recent_videos": [{"title": "왕의 삶 내가 왕인데 방심하면 죽는 게임", "views": 3875497, "likes": null, "date": null}, {"title": "Spelling Mistakes Means Death", "views": 2002831, "likes": null, "date": null}, {"title": "괴이증후군 공포 쯔꾸르 게임", "views": 1420651, "likes": null, "date": null}, {"title": "광고로 맨날 나오는 그 게임", "views": 1207182, "likes": null, "date": null}, {"title": "Dealer Life 2 전당포", "views": 1187444, "likes": null, "date": null}]}, {"platform": "YouTube", "channel_name": "혜안", "followers": 3800000, "live_viewers": 0, "category": "인디/공포게임 리뷰", "recent_videos": [{"title": "얼공 될뻔... 캠을 해킹하는 소닉 공포게임", "views": 3661067, "likes": null, "date": null}, {"title": "눈 떠보니 살아있는채로 관 속에 묻혀있었다", "views": 3029498, "likes": null, "date": null}, {"title": "진짜 하나도 안 무서운데 진짜 무서운 게임", "views": 2657484, "likes": null, "date": null}, {"title": "리뷰 7000개가 싹다 극찬인 범죄현장 청소게임", "views": 2319583, "likes": null, "date": null}, {"title": "리뷰 145개중 144개가 극찬인 파리게임 다운 받아봤습니다", "views": 1837800, "likes": null, "date": null}]}, {"platform": "YouTube", "channel_name": "썩쏘TV", "followers": 3200000, "live_viewers": 5000, "category": "모바일 게임", "recent_videos": [{"title": "Here we go again this time on a deserted island", "views": 1022743, "likes": null, "date": null}, {"title": "One Punch Man is finally here", "views": 1022605, "likes": null, "date": null}, {"title": "Top 10 Games Picked by a YouTuber Who Played Only Mobile Games for 2 Years", "views": 763247, "likes": null, "date": null}, {"title": "이 게임이 3탄이 나오다니 바로현질", "views": 550100, "likes": null, "date": null}, {"title": "I made a full-up Lost Vein with 1 million won in cash", "views": 461866, "likes": null, "date": null}]}, {"platform": "YouTube", "channel_name": "대도서관", "followers": 2900000, "live_viewers": 5000, "category": "공포/어드벤처 게임", "recent_videos": [{"title": "대통령 경호하기 게임 Mr. President", "views": 1078744, "likes": null, "date": null}, {"title": "러스티 레이크 루츠", "views": 789280, "likes": null, "date": null}, {"title": "신뢰의 진화 게임", "views": 489630, "likes": null, "date": null}, {"title": "주유소 알바 게임 극한 알바 Gasosta", "views": 487209, "likes": null, "date": null}, {"title": "던전탈출게임 대도서관 병맛게임 실황", "views": 439594, "likes": null, "date": null}]}, {"platform": "YouTube", "channel_name": "풍월량", "followers": 2800000, "live_viewers": 6000, "category": "게임 실황/스토리", "recent_videos": [{"title": "영화 같은 생존의 순간들! 프로젝트 좀보이드 몰아보기", "views": 497887, "likes": null, "date": null}, {"title": "최하위 궁녀의 궁궐 생존기! 몰입력 미쳤다는 드라마 같은 게임", "views": 340248, "likes": null, "date": null}, {"title": "트래블러즈 레스트 판타지 세계에서 여관 운영하는 게임", "views": 297224, "likes": null, "date": null}, {"title": "풍월량은 폭군입니까? 중세시대 행정관이 되어서 정치하는 게임", "views": 188085, "likes": null, "date": null}, {"title": "역대급 디테일을 보여주는 부모님 피하는 게임", "views": 187095, "likes": null, "date": null}]}, {"platform": "YouTube", "channel_name": "카사노박TV", "followers": 2800000, "live_viewers": 3000, "category": "게임 리뷰/정보", "recent_videos": [{"title": "난 왜 이 갓게임을 이제서야 알았나? 덕코프 리뷰", "views": 206034, "likes": null, "date": null}, {"title": "트레일러 사기라 의심받던 국산 좀비게임의 실체가 드디어", "views": 58942, "likes": null, "date": null}]}, {"platform": "YouTube", "channel_name": "우왁굳", "followers": 2100000, "live_viewers": 4000, "category": "종합 게임 실황", "recent_videos": [{"title": "Minecraft Squidgame - awesome quality!", "views": 3458217, "likes": null, "date": null}, {"title": "이거 완전 어몽어스 상위호환 게임인데? 락다운 프로토콜", "views": 467528, "likes": null, "date": null}, {"title": "백룸 풀버전 비명 계속 지름", "views": 454338, "likes": null, "date": null}, {"title": "사슴인척 하는 게임", "views": 412503, "likes": null, "date": null}, {"title": "100명 중 눈치있는 사람 1명만 생존합니다 배그 눈치왕 서바이벌", "views": 346557, "likes": null, "date": null}]}, {"platform": "YouTube", "channel_name": "머독", "followers": 1500000, "live_viewers": 2000, "category": "인디/공포게임 리뷰", "recent_videos": [{"title": "공포게임 외길인생 수탉 님의 게임 리뷰 보기", "views": 357647, "likes": null, "date": null}]}, {"platform": "YouTube", "channel_name": "조나스", "followers": 1400000, "live_viewers": 3000, "category": "샌드박스 게임", "recent_videos": [{"title": "Playing one representative Roblox game from each year", "views": 1076133, "likes": null, "date": null}]}, {"platform": "YouTube", "channel_name": "수탉", "followers": 1300000, "live_viewers": 4000, "category": "인디/공포게임 리뷰", "recent_videos": [{"title": "A chilling horror game based on a true story Woodbury Getaway", "views": 1046347, "likes": null, "date": null}, {"title": "오니기리 가게를 운영하는 게임 Onigiri Shop Simulator", "views": 929455, "likes": null, "date": null}, {"title": "이웃집을 훔쳐보는데 걸려버렸다 공포게임 TERPENIE", "views": 647747, "likes": null, "date": null}, {"title": "Choose one of the two doors", "views": 138924, "likes": null, "date": null}]}, {"platform": "YouTube", "channel_name": "김성회의 G식백과", "followers": 1100000, "live_viewers": 1000, "category": "게임 칼럼/분석", "recent_videos": [{"title": "엘든링 게임리뷰어 vs 영화평론가의 권위차이는 어디서 오는가", "views": 485758, "likes": null, "date": null}, {"title": "밥 굶던 인디가 차를 바꿀 정도의 초대박인데", "views": 297689, "likes": null, "date": null}, {"title": "1조짜리 인디게임은 무엇이 다른가?", "views": 156292, "likes": null, "date": null}]}, {"platform": "YouTube", "channel_name": "우주하마", "followers": 1100000, "live_viewers": 2000, "category": "인디 게임 실황", "recent_videos": [{"title": "K-직장인 5명과 땅 파는 게임을 했더니...", "views": 1306628, "likes": null, "date": null}]}, {"platform": "YouTube", "channel_name": "형독방송", "followers": 1000000, "live_viewers": 2000, "category": "게임 실황/엔터테인먼트", "recent_videos": [{"title": "길 찾기 게임 컨텐츠 역사상 최초의 사건", "views": 55614, "likes": null, "date": null}]}, {"platform": "YouTube", "channel_name": "로블록스 선생님", "followers": 900000, "live_viewers": 2000, "category": "샌드박스 게임", "recent_videos": [{"title": "로블록스 한국에서 제일 인기 있는 유튜버는 누구일까?", "views": 298163, "likes": null, "date": null}]}, {"platform": "YouTube", "channel_name": "이도원", "followers": 900000, "live_viewers": 0, "category": "게임 실황/엔터테인먼트", "recent_videos": [{"title": "도파민의 황제", "views": 833633, "likes": null, "date": null}, {"title": "도파민 형제", "views": 327340, "likes": null, "date": null}]}, {"platform": "YouTube", "channel_name": "클템", "followers": 800000, "live_viewers": 1000, "category": "e스포츠", "recent_videos": [{"title": "T1 is Bombing the MSI Qualifiers", "views": 60535, "likes": null, "date": null}]}, {"platform": "YouTube", "channel_name": "지존조세", "followers": 800000, "live_viewers": 1500, "category": "게임 리뷰/정보", "recent_videos": [{"title": "2025년 게임 이용자수 감소.. 대체 왜?", "views": 181940, "likes": null, "date": null}]}, {"platform": "YouTube", "channel_name": "휘숙이", "followers": 700000, "live_viewers": 1500, "category": "게임 리뷰/정보", "recent_videos": [{"title": "속는 셈 치고 샀다가 인생작 됨! 2025년 돈값 스팀 게임 추천 TOP 14", "views": 236540, "likes": null, "date": null}]}, {"platform": "YouTube", "channel_name": "판자집 강아지", "followers": 600000, "live_viewers": 1500, "category": "인디 게임 실황", "recent_videos": [{"title": "A survival game that is so relaxing ( steam game )", "views": 1503928, "likes": null, "date": null}, {"title": "한국 인디게임의 미래", "views": 419354, "likes": null, "date": null}, {"title": "래토피아 대한민국 인디 게임의 미래 2", "views": 303131, "likes": null, "date": null}]}, {"platform": "YouTube", "channel_name": "엠터", "followers": 600000, "live_viewers": 1500, "category": "게임 실황", "recent_videos": [{"title": "A 100% accurate live-action adaptation of the #1 game in Korea", "views": 106645, "likes": null, "date": null}]}, {"platform": "YouTube", "channel_name": "요돼지 게임평가단", "followers": 500000, "live_viewers": 1000, "category": "게임 리뷰/정보", "recent_videos": [{"title": "2025년 상반기 가장 재밌었던 게임 BEST 10", "views": 58430, "likes": null, "date": null}, {"title": "요돼지 선정 2025년 가장 재밌었던 게임 BEST 15", "views": 25163, "likes": null, "date": null}, {"title": "2025년 요돼지에게 가장 재미없었던 게임 TOP 10", "views": 23762, "likes": null, "date": null}]}, {"platform": "YouTube", "channel_name": "쎈축용쓰TV", "followers": 500000, "live_viewers": 0, "category": "게임 리뷰/정보", "recent_videos": [{"title": "Goodbye 2025!! Top 15 Games with the Most Fun Endings", "views": 57468, "likes": null, "date": null}]}, {"platform": "YouTube", "channel_name": "빅헤드", "followers": 500000, "live_viewers": 0, "category": "게임 실황/엔터테인먼트", "recent_videos": [{"title": "요즘 인방에서 유행한다는 도파민에 미친 게임", "views": 148123, "likes": null, "date": null}]}, {"platform": "YouTube", "channel_name": "IGN Korea", "followers": 450000, "live_viewers": 0, "category": "게임 뉴스/리뷰", "recent_videos": [{"title": "2025년 가장 많이 사랑받은 멀티게임은 무엇일까요?", "views": 11122, "likes": null, "date": null}]}, {"platform": "YouTube", "channel_name": "메탈킴", "followers": 400000, "live_viewers": 500, "category": "게임 리뷰/정보", "recent_videos": [{"title": "이것이 인디게임의 정수다. 로스트 루인즈 리뷰", "views": 166306, "likes": null, "date": null}, {"title": "더 게임 어워드 2025 리뷰", "views": 82343, "likes": null, "date": null}]}, {"platform": "YouTube", "channel_name": "게임통", "followers": 400000, "live_viewers": 500, "category": "게임 리뷰/정보", "recent_videos": [{"title": "2025년을 집어삼킨 최고의 게임 Top 10", "views": 26161, "likes": null, "date": null}, {"title": "2025 게임 어워드 공개 신작 게임 총정리", "views": 5755, "likes": null, "date": null}]}, {"platform": "YouTube", "channel_name": "마재TV", "followers": 350000, "live_viewers": 500, "category": "게임 리뷰/정보", "recent_videos": [{"title": "로보토미 코퍼레이션 67시간 중간리뷰", "views": 22379, "likes": null, "date": null}]}, {"platform": "YouTube", "channel_name": "집마 홀릭", "followers": 350000, "live_viewers": 0, "category": "게임 리뷰/정보", "recent_videos": [{"title": "Ghost of Yotei Review", "views": 209808, "likes": null, "date": null}]}, {"platform": "YouTube", "channel_name": "게임하는인기", "followers": 300000, "live_viewers": 0, "category": "게임 실황", "recent_videos": [{"title": "캐삭빵 참교육 컨텐츠 로스트아크", "views": 40822, "likes": null, "date": null}]}, {"platform": "YouTube", "channel_name": "똘킹", "followers": 300000, "live_viewers": 0, "category": "게임 리뷰/정보", "recent_videos": [{"title": "출시하자마자 압긍찍어버린 도파민 노가다게임", "views": 112122, "likes": null, "date": null}]}, {"platform": "YouTube", "channel_name": "흑열전구", "followers": 200000, "live_viewers": 800, "category": "인디/공포게임 리뷰", "recent_videos": [{"title": "스팀에서 난리난 국산 좀비 게임 낙원 알파 리뷰", "views": 72075, "likes": null, "date": null}]}, {"platform": "YouTube", "channel_name": "영래기", "followers": 200000, "live_viewers": 0, "category": "게임 리뷰/정보", "recent_videos": [{"title": "2025년 한국 콘솔 게임 왜 이렇게 잘 나갈까?", "views": 46851, "likes": null, "date": null}]}, {"platform": "YouTube", "channel_name": "GameDO", "followers": 150000, "live_viewers": 0, "category": "게임 뉴스", "recent_videos": [{"title": "No disc in the GTA 6 physical edition", "views": 57539, "likes": null, "date": null}]}, {"platform": "YouTube", "channel_name": "우정잉", "followers": 0, "live_viewers": 0, "category": "인디/공포게임 리뷰", "recent_videos": [{"title": "스팀 리뷰 창에서 이 사람이 보이면 절대 믿지 마세요", "views": 321419, "likes": null, "date": null}]}];
+const sponsorData = {"SOL: enchant": {"is_sponsored": true, "sponsorships": [{"channel_name": "요돼지 게임평가단", "platform": "YouTube", "followers": 500000, "title": "SOL: enchant 요돼지 게임평가단 플레이 / 리뷰", "views": 63389, "likes": 1916, "days_ago": 23, "is_sponsored": true}, {"channel_name": "이도원", "platform": "YouTube", "followers": 900000, "title": "SOL: enchant 이도원 플레이 / 리뷰", "views": 443571, "likes": 22340, "days_ago": 10, "is_sponsored": true}, {"channel_name": "지존조세", "platform": "YouTube", "followers": 800000, "title": "SOL: enchant 지존조세 플레이 / 리뷰", "views": 369226, "likes": 14682, "days_ago": 73, "is_sponsored": true}]}, "오딘: 발할라 라이징": {"is_sponsored": true, "sponsorships": [{"channel_name": "게임통", "platform": "YouTube", "followers": 400000, "title": "오딘: 발할라 라이징 게임통 플레이 / 리뷰", "views": 37900, "likes": 1468, "days_ago": 81, "is_sponsored": true}, {"channel_name": "게임통", "platform": "YouTube", "followers": 400000, "title": "오딘: 발할라 라이징 게임통 플레이 / 리뷰", "views": 99382, "likes": 5153, "days_ago": 76, "is_sponsored": true}, {"channel_name": "요돼지 게임평가단", "platform": "YouTube", "followers": 500000, "title": "오딘: 발할라 라이징 요돼지 게임평가단 플레이 / 리뷰", "views": 117259, "likes": 4724, "days_ago": 40, "is_sponsored": true}, {"channel_name": "메탈킴", "platform": "YouTube", "followers": 400000, "title": "오딘: 발할라 라이징 메탈킴 플레이 / 리뷰", "views": 138466, "likes": 2977, "days_ago": 48, "is_sponsored": true}, {"channel_name": "메탈킴", "platform": "YouTube", "followers": 400000, "title": "오딘: 발할라 라이징 메탈킴 플레이 / 리뷰", "views": 95255, "likes": 2197, "days_ago": 12, "is_sponsored": true}, {"channel_name": "카사노박TV", "platform": "YouTube", "followers": 2800000, "title": "오딘: 발할라 라이징 카사노박TV 플레이 / 리뷰", "views": 1110376, "likes": 47982, "days_ago": 6, "is_sponsored": true}, {"channel_name": "카사노박TV", "platform": "YouTube", "followers": 2800000, "title": "오딘: 발할라 라이징 카사노박TV 플레이 / 리뷰", "views": 1083159, "likes": 61049, "days_ago": 74, "is_sponsored": true}]}, "WOS: 화이트아웃 서바이벌": {"is_sponsored": true, "sponsorships": [{"channel_name": "게임통", "platform": "YouTube", "followers": 400000, "title": "WOS: 화이트아웃 서바이벌 게임통 플레이 / 리뷰", "views": 138101, "likes": 3333, "days_ago": 44, "is_sponsored": true}, {"channel_name": "빅헤드", "platform": "YouTube", "followers": 500000, "title": "WOS: 화이트아웃 서바이벌 빅헤드 플레이 / 리뷰", "views": 157264, "likes": 7209, "days_ago": 6, "is_sponsored": true}, {"channel_name": "이도원", "platform": "YouTube", "followers": 900000, "title": "WOS: 화이트아웃 서바이벌 이도원 플레이 / 리뷰", "views": 415997, "likes": 15604, "days_ago": 57, "is_sponsored": true}]}, "리니지M": {"is_sponsored": true, "sponsorships": [{"channel_name": "요돼지 게임평가단", "platform": "YouTube", "followers": 500000, "title": "리니지M 요돼지 게임평가단 플레이 / 리뷰", "views": 126558, "likes": 4600, "days_ago": 44, "is_sponsored": true}, {"channel_name": "요돼지 게임평가단", "platform": "YouTube", "followers": 500000, "title": "리니지M 요돼지 게임평가단 플레이 / 리뷰", "views": 202968, "likes": 8913, "days_ago": 81, "is_sponsored": true}, {"channel_name": "게임통", "platform": "YouTube", "followers": 400000, "title": "리니지M 게임통 플레이 / 리뷰", "views": 37278, "likes": 1237, "days_ago": 72, "is_sponsored": true}, {"channel_name": "게임통", "platform": "YouTube", "followers": 400000, "title": "리니지M 게임통 플레이 / 리뷰", "views": 197833, "likes": 7015, "days_ago": 33, "is_sponsored": true}]}, "킹샷:Kingshot": {"is_sponsored": false, "sponsorships": []}, "마비노기 모바일": {"is_sponsored": true, "sponsorships": [{"channel_name": "요돼지 게임평가단", "platform": "YouTube", "followers": 500000, "title": "마비노기 모바일 요돼지 게임평가단 플레이 / 리뷰", "views": 116703, "likes": 3782, "days_ago": 84, "is_sponsored": true}, {"channel_name": "카사노박TV", "platform": "YouTube", "followers": 2800000, "title": "마비노기 모바일 카사노박TV 플레이 / 리뷰", "views": 410431, "likes": 17977, "days_ago": 11, "is_sponsored": true}, {"channel_name": "카사노박TV", "platform": "YouTube", "followers": 2800000, "title": "마비노기 모바일 카사노박TV 플레이 / 리뷰", "views": 789240, "likes": 33429, "days_ago": 83, "is_sponsored": true}]}, "로얄 매치 Royal Match": {"is_sponsored": false, "sponsorships": []}, "메이플 키우기": {"is_sponsored": false, "sponsorships": []}, "라스트 워: 서바이벌": {"is_sponsored": false, "sponsorships": []}, "가십하버: 합성 & 스토리 게임": {"is_sponsored": false, "sponsorships": []}, "로블록스 (Roblox)": {"is_sponsored": false, "sponsorships": []}, "명조:워더링 웨이브 × 사이버펑크 콜라보": {"is_sponsored": false, "sponsorships": []}, "승리의 여신: 니케": {"is_sponsored": false, "sponsorships": []}, "운빨존많겜": {"is_sponsored": false, "sponsorships": []}, "Limbus Company": {"is_sponsored": true, "sponsorships": [{"channel_name": "썩쏘TV", "platform": "YouTube", "followers": 3200000, "title": "Limbus Company 썩쏘TV 플레이 / 리뷰", "views": 609194, "likes": 20511, "days_ago": 63, "is_sponsored": true}, {"channel_name": "요돼지 게임평가단", "platform": "YouTube", "followers": 500000, "title": "Limbus Company 요돼지 게임평가단 플레이 / 리뷰", "views": 84386, "likes": 5063, "days_ago": 20, "is_sponsored": true}, {"channel_name": "휘숙이", "platform": "YouTube", "followers": 700000, "title": "Limbus Company 휘숙이 플레이 / 리뷰", "views": 190080, "likes": 10221, "days_ago": 13, "is_sponsored": true}]}, "트릭컬 리바이브": {"is_sponsored": false, "sponsorships": []}, "씨사이드 익스케이프: 합성 & 스토리 게임": {"is_sponsored": false, "sponsorships": []}, "라스트 Z: 서바이벌 슈터": {"is_sponsored": false, "sponsorships": []}, "라스트 어사일럼: 페스트": {"is_sponsored": false, "sponsorships": []}, "꿈의 정원 (Gardenscapes)": {"is_sponsored": false, "sponsorships": []}};
+
+function fmtN(n){if(!n||n===null)return'-';n=parseInt(n);if(n>=1000000)return(n/1000000).toFixed(1)+'M';if(n>=1000)return(n/1000).toFixed(0)+'K';return n.toString()}
+
+function getGameKeywords(name){
+  const kw=[name];
+  if(name.includes('('))kw.push(name.split('(')[0].trim());
+  if(name.includes(':'))kw.push(name.split(':')[0].trim());
+  if(name.includes('오딘'))kw.push('오딘','발할라');
+  if(name.includes('리니지'))kw.push('리니지','Lineage');
+  if(name.includes('마비노기'))kw.push('마비노기','Mabinogi');
+  if(name.includes('로얄 매치'))kw.push('Royal Match','로얄매치');
+  if(name.includes('메이플'))kw.push('메이플','Maple');
+  if(name.includes('라스트 워'))kw.push('라스트워','Last War');
+  if(name.includes('가십하버'))kw.push('가십하버','Gossip Harbor');
+  if(name.includes('SOL'))kw.push('SOL','sol enchant');
+  if(name.includes('WOS'))kw.push('WOS','Whiteout','화이트아웃');
+  if(name.includes('킹샷'))kw.push('킹샷','Kingshot');
+  if(name.includes('트릭컬'))kw.push('트릭컬','Trickcal');
+  if(name.includes('승리의 여신')||name.includes('니케'))kw.push('니케','Nikke');
+  if(name.includes('Limbus'))kw.push('Limbus','림버스');
+  if(name.includes('로블록스')||name.includes('Roblox'))kw.push('로블록스','Roblox');
+  if(name.includes('명조'))kw.push('명조','Wuthering');
+  if(name.includes('운빨'))kw.push('운빨존많겜');
+  return[...new Set(kw)];
+}
+
+function findRelatedStreamers(gameName){
+  const keywords=getGameKeywords(gameName).map(k=>k.toLowerCase());
+  const results=[];
+  for(const inf of influencersData){
+    const chName=inf.channel_name||inf.name||'';
+    const followers=inf.followers||inf.subscriber_count||0;
+    const platform=inf.platform||'YouTube';
+    const vids=inf.recent_videos||[];
+    const matched=[];
+    for(const v of vids){if((v.title||'').toLowerCase().split(/[\s,./]+/).some(w=>keywords.some(kw=>w.includes(kw)||kw.includes(w))))matched.push(v)}
+    if(matched.length>0)results.push({channel_name:chName,followers,platform,category:inf.category||'',matched_videos:matched});
+  }
+  return results;
+}
+
+function openGameModal(rank){
+  const g=games.find(x=>x.rank===rank);
+  if(!g)return;
+  document.getElementById('modalTitle').innerHTML=g.name+' <span class="mh-cat ct '+cc(g.category)+'">'+g.category+'</span>';
+  document.getElementById('modalMeta').innerHTML='<span>🏢 '+g.company+'</span><span>⭐ <strong>'+g.rating.toFixed(2)+'</strong></span><span>📦 '+g.package+'</span><span>🏆 매출 '+g.rank+'위</span>';
+  let body='';
+  const related=findRelatedStreamers(g.name);
+  body+='<div class="modal-section"><div class="modal-section-title">🎬 관련 스트리머 <span class="badge bb">'+related.length+'명</span></div>';
+  if(related.length===0){body+='<div style="color:var(--t2);font-size:13px;padding:16px;background:var(--bg2);border-radius:10px;text-align:center">매칭되는 스트리머 없음</div>'}
+  else{body+='<table class="streamer-table"><thead><tr><th>스트리머</th><th>플랫폼</th><th>구독자</th><th>관련 영상</th><th>조회수</th><th>좋아요</th></tr></thead><tbody>';
+  for(const r of related){const tv=r.matched_videos.reduce((s,v)=>s+(v.views||0),0);const tl=r.matched_videos.reduce((s,v)=>s+(v.likes||0),0);body+='<tr><td class="st-name">'+r.channel_name+'</td><td><span class="badge bg">'+r.platform+'</span></td><td>'+fmtN(r.followers)+'</td><td>'+r.matched_videos.length+'개</td><td class="st-views">▶ '+fmtN(tv)+'</td><td class="st-likes">👍 '+fmtN(tl)+'</td></tr>';
+  for(const v of r.matched_videos){body+='<tr><td colspan="6" style="padding:0"><div class="modal-vid-item"><div class="mvi-thumb">🎬</div><div class="mvi-info"><div class="mvi-title">'+(v.title||'').substring(0,80)+'</div><div class="mvi-stats">▶ '+fmtN(v.views)+' views · 👍 '+fmtN(v.likes)+'</div></div></div></td></tr>'}}
+  body+='</tbody></table>'}
+  body+='</div>';
+  const sponsor=sponsorData[g.name]||{is_sponsored:false,sponsorships:[]};
+  body+='<div class="modal-section"><div class="modal-section-title">💰 스트리머 유료 광고 현황 '+(sponsor.is_sponsored?'<span class="sponsor-badge yes">💰 유료 광고 진행</span>':'<span class="sponsor-badge no">유료 광고 없음</span>')+'</div>';
+  if(!sponsor.is_sponsored||sponsor.sponsorships.length===0){body+='<div style="color:var(--t2);font-size:13px;padding:16px;background:var(--bg2);border-radius:10px;text-align:center">확인된 유료 광고 없음</div>'}
+  else{body+='<table class="streamer-table"><thead><tr><th>스트리머</th><th>광고 영상</th><th>조회수</th><th>좋아요</th><th>게시일</th><th>상태</th></tr></thead><tbody>';
+  const totals={};for(const sp of sponsor.sponsorships){const k=sp.channel_name;if(!totals[k])totals[k]={ch:sp.channel_name,plat:sp.platform,fol:sp.followers,v:0,l:0,c:0,days:[]};totals[k].v+=sp.views;totals[k].l+=sp.likes;totals[k].c++;totals[k].days.push(sp.days_ago)}
+  for(const ch of Object.values(totals).sort((a,b)=>b.v-a.v)){const avg=Math.round(ch.days.reduce((s,d)=>s+d,0)/ch.days.length);body+='<tr><td class="st-name">'+ch.ch+'</td><td>'+ch.c+'개</td><td class="st-views">▶ '+fmtN(ch.v)+'</td><td class="st-likes">👍 '+fmtN(ch.l)+'</td><td class="st-date">'+(avg<=7?avg+'일 전':avg<=30?Math.round(avg/7)+'주 전':Math.round(avg/30)+'개월 전')+'</td><td><span class="sponsor-badge yes">광고</span></td></tr>'}
+  body+='</tbody></table>';
+  const tsv=sponsor.sponsorships.reduce((s,v)=>s+v.views,0);const tsl=sponsor.sponsorships.reduce((s,v)=>s+v.likes,0);const eng=tsv>0?((tsl/tsv)*100).toFixed(1):'0';
+  body+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:16px">';
+  body+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center"><div style="font-size:11px;color:var(--t2);margin-bottom:4px">총 광고 영상</div><div style="font-size:20px;font-weight:700;color:var(--yellow)">'+sponsor.sponsorships.length+'개</div></div>';
+  body+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center"><div style="font-size:11px;color:var(--t2);margin-bottom:4px">총 조회수</div><div style="font-size:20px;font-weight:700;color:var(--blue)">▶ '+fmtN(tsv)+'</div></div>';
+  body+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center"><div style="font-size:11px;color:var(--t2);margin-bottom:4px">총 좋아요</div><div style="font-size:20px;font-weight:700;color:var(--red)">👍 '+fmtN(tsl)+'</div></div>';
+  body+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center"><div style="font-size:11px;color:var(--t2);margin-bottom:4px">참여율</div><div style="font-size:20px;font-weight:700;color:var(--green)">'+eng+'%</div></div>';
+  body+='</div>'}
+  body+='</div>';
+  document.getElementById('modalBody').innerHTML=body;
+  document.getElementById('gameModal').classList.add('active');
+  document.body.style.overflow='hidden';
+}
+function closeGameModal(){document.getElementById('gameModal').classList.remove('active');document.body.style.overflow=''}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeGameModal()});
+document.getElementById('gameModal').addEventListener('click',e=>{if(e.target.id==='gameModal')closeGameModal()});
+</script>
+</body></html>
