@@ -114,7 +114,7 @@ function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace
 async function loadData(){
   try{
     document.getElementById('rs').textContent='상태: TAPD 데이터 로딩 중...';
-    const response=await fetch('/tapd_data.json?_='+Date.now());
+    const response=await fetch('./tapd_data.json?_='+Date.now());
     if(!response.ok)throw new Error('JSON 로딩 오류: '+response.status);
     const result=await response.json();
     

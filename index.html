@@ -12,12 +12,12 @@ body{background:#0a0a0f;color:#e1e2ea;font-family:'Inter',sans-serif;min-height:
 h1{font-size:32px;font-weight:700;margin-bottom:8px;background:linear-gradient(135deg,#3b82f6,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .sub{color:#6b7a9e;font-size:14px;margin-bottom:48px}
 .cards{display:grid;grid-template-columns:1fr 1fr;gap:20px}
-.card{background:#12131a;border:1px solid #2a2b3a;border-radius:16px;padding:32px 24px;text-decoration:none;color:#e1e2ea;transition:all .2s}
+.card{background:#12131a;border:1px solid #2a2b3a;border-radius:16px;padding:32px 24px;text-decoration:none;color:#e1e2ea;transition:all .2s;display:block}
 .card:hover{border-color:#3b82f6;transform:translateY(-4px);box-shadow:0 8px 30px rgba(59,130,246,.15)}
-.card-icon{font-size:40px;margin-bottom:16px}
+.card-icon{font-size:48px;margin-bottom:16px}
 .card h2{font-size:18px;font-weight:700;margin-bottom:8px}
 .card p{font-size:13px;color:#6b7a9e;line-height:1.5}
-.card .card-url{font-size:11px;color:#3b82f6;margin-top:12px;word-break:break-all}
+.card .card-link{font-size:11px;color:#3b82f6;margin-top:16px;word-break:break-all;opacity:.7}
 .footer{margin-top:48px;font-size:12px;color:#6b7a9e}
 @media(max-width:500px){.cards{grid-template-columns:1fr}}
 </style>
@@ -31,14 +31,16 @@ h1{font-size:32px;font-weight:700;margin-bottom:8px;background:linear-gradient(1
 <div class="card-icon">🏆</div>
 <h2>한국 모바일 게임 대시보드</h2>
 <p>구글플레이 매출 Top50 · 랭킹 추이 · 인플루언서 · 여론 분석 · 유료 광고</p>
+<div class="card-link">game/index.html</div>
 </a>
 <a class="card" href="tapd/index.html">
 <div class="card-icon">📋</div>
 <h2>TAPD 품질 대시보드</h2>
 <p>워크스페이스 #46691872 · 결함 추적 · 품질 지표 · 담당자별 현황</p>
+<div class="card-link">tapd/index.html</div>
 </a>
 </div>
-<div class="footer">마지막 업데이트: __UPDATE_DATE__ · Powered by GitHub Pages</div>
+<div class="footer">Powered by GitHub Pages</div>
 </div>
 </body>
 </html>
