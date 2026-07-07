@@ -97,7 +97,7 @@ document.getElementById('xc').innerHTML='';const xKl={fatal:'치명',serious:'�
 document.getElementById('xc').innerHTML='<span class="chip on" data-v="all" data-t="sv">전체</span>'+document.getElementById('xc').innerHTML;
 document.querySelectorAll('.chip').forEach(c=>{c.onclick=function(){const v=this.getAttribute('data-v');const t=this.getAttribute('data-t');const s=FS[t];if(v==='all'){if(!s.has('all')){s.clear();s.add('all')}else{s.delete('all');this.classList.remove('on')}if(s.size===0){s.add('all')}document.querySelectorAll('.chip[data-v="all"][data-t="'+t+'"]').forEach(x=>x.classList.toggle('on',s.has('all')))}else{s.delete('all');document.querySelectorAll('.chip[data-v="all"][data-t="'+t+'"]').forEach(x=>x.classList.remove('on'));if(s.has(v)){s.delete(v);this.classList.remove('on')}else{s.add(v);this.classList.add('on')}if(s.size===0){s.add('all');document.querySelectorAll('.chip[data-v="all"][data-t="'+t+'"]').forEach(x=>x.classList.add('on'))}}rnd()}});
 document.getElementById('th').textContent=HB.length;
-document.getElementById('lu').textContent=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})+(raw.meta&&raw.meta.fetched_at?' (수집: '+raw.meta.fetched_at.replace('T',' ').substring(0,16)+')':'');
+document.getElementById('lu').textContent=(useProxy?'🔴 실시간 ':'📦 캐시 ')+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})+(raw.meta&&raw.meta.fetched_at?' (수집: '+raw.meta.fetched_at.replace('T',' ').substring(0,16)+')':'');
 document.getElementById('lb').style.display='none';
 rnd();detCh();
 }catch(e){document.getElementById('lb').innerHTML='Error: '+e.message}
