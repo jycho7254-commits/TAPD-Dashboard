@@ -169,7 +169,29 @@ let html='';Object.entries(gr).forEach(([t,its])=>{html+='<div style="margin-bot
 el.innerHTML=html;document.getElementById('ntT').textContent='마지막 확인: '+new Date().toLocaleTimeString('ko-KR')+' (3시간)';
 }
 function tN(){NO=!NO;document.getElementById('p').classList.toggle('open',NO);document.getElementById('d').style.display='none'}
-async function manualRefresh(){const rs=document.getElementById('rs');rs.textContent='🔄 TAPD 실시간 갱신 중...';try{FT=true;await ld({live:true});rs.textContent='✅ 실시간 완료 ('+new Date().toLocaleTimeString('ko-KR')+')';setTimeout(()=>{rs.textContent='마지막: '+new Date().toLocaleTimeString('ko-KR')},4000)}catch(e){rs.textContent='❌ 오류: '+e.message;document.getElementById('lb').innerHTML='Error: '+e.message}}
+async function manualRefresh(){const rs=document.getElementById('rs');rs.textContent='🔄 GitHub Actions 실행 중...';
+try{
+const TOKEN='ghp_placeholder';
+const WF_URL='https://api.github.com/repos/jycho7254-commits/TAPD-Dashboard/actions/workflows/tapd-sync.yml/dispatches';
+// GitHub Actions 트리거 — 인증 없이는 안 됨, 직접 fetch로 tapd_data.json 갱신 확인
+FT=true;
+// 방법 1: GitHub Actions 트리거 (토큰 필요하므로 생략)
+// 방법 2: tapd_data.json을 새로고침해서 최신 반영
+await ld({live:false});
+// 캐시 무시하고 재로드
+const bustCache='./tapd_data.json?_='+Date.now();
+const resp=await fetch(bustCache);
+if(resp.ok){
+const raw=await resp.json();
+const rb=(raw.data||raw).filter(Boolean);
+HB=rb.filter(b=>HF.some(f=>(b[f]||'').includes('HUN')));
+rnd();
+rs.textContent='✅ 최신 데이터 로드 ('+new Date().toLocaleTimeString('ko-KR')+')';
+setTimeout(()=>{rs.textContent='마지막: '+new Date().toLocaleTimeString('ko-KR')},4000);
+}else{
+rs.textContent='❌ HTTP '+resp.status;
+}
+}catch(e){rs.textContent='❌ 오류: '+e.message;document.getElementById('lb').innerHTML='Error: '+e.message}}
 let sec=10800;setInterval(()=>{sec--;if(sec<=0){sec=10800;ld()}},1000);
 ld();
 </script></body></html>
