@@ -59,8 +59,9 @@ td a{color:#667eea;text-decoration:none}td a:hover{text-decoration:underline}
 <div class="nt-panel" id="p"><button class="nt-close" onclick="tN()">✕</button><h3>🔔 변경 알림</h3><div id="ntT" style="font-size:10px;color:#999;margin:2px 0 10px">대기</div><div id="ntL"><div class="nt-empty">📡 첫 로딩 후 변경 감지</div></div></div>
 <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;padding:6px 10px;background:#fff;border-radius:8px;font-size:11px"><span style="color:#666">&#x1F4E1; TAPD</span><button onclick="manualRefresh()" style="padding:4px 12px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:11px">&#x1F504; &#xC218;&#xB3D9; &#xC5C5;&#xB370;&#xC774;&#xD2B8;</button><span id="rs" style="color:#999;margin-left:auto;font-size:10px">&#xB9C8;&#xC9C0;&#xB9C9;: -</span></div><div class="flt"><label>수정 버전:</label><div class="chips" id="vc"></div><label style="margin-left:6px">발견 버전:</label><div class="chips" id="dc"></div><label style="margin-left:6px">상태:</label><div class="chips" id="sc"></div><label style="margin-left:6px">심각:</label><div class="chips" id="xc"></div><span class="cnt" id="cb">0건</span></div>
 <div id="lb" class="lb">📡 데이터 로딩 중...</div><div id="ct"></div>
-<div class="card"><div class="card-title">📈 일일 버그 추세 (HUN 기준, 최근 30일)</div><div style="padding:8px;background:#f8f9fa;border-radius:8px;"><canvas id="dailyTrend" height="180"></canvas></div></div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;"><div class="card" style="margin:0"><div class="card-title">📊 상태 분포</div><div style="padding:4px;"><canvas id="statusDist" height="180"></canvas></div></div><div class="card" style="margin:0"><div class="card-title">📊 심각도 분포</div><div style="padding:4px;"><canvas id="severeDist" height="180"></canvas></div></div></div>
+<div class="card"><div class="card-title">📈 일일 버그 추세 (HUN 전체, 최근 30일)</div><div style="padding:8px;background:#f8f9fa;border-radius:8px;"><canvas id="dailyTrend" height="200"></canvas></div></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;"><div class="card" style="margin:0"><div class="card-title">📊 버전별 상태 분포 (v1.1~v1.5)</div><div style="padding:4px;"><canvas id="statusByVersion" height="200"></canvas></div></div><div class="card" style="margin:0"><div class="card-title">📊 버전별 심각도 분포 (v1.1~v1.5)</div><div style="padding:4px;"><canvas id="sevByVersion" height="200"></canvas></div></div></div>
+<div class="card"><div class="card-title">📈 버전별 HUN TAPD 총량 추이</div><div style="padding:8px;background:#f8f9fa;border-radius:8px;"><canvas id="versionTrend" height="200"></canvas></div></div>
 <div class="footer">TAPD API 실시간 · Trickcal_Revive · deepseek-v4-pro · http://192.168.4.139:8080</div>
 </div>
 <script>
@@ -134,25 +135,53 @@ function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace
 function saveBg(id,v){try{const m=JSON.parse(localStorage.getItem('tapd_bigo')||'{}');if(v)m[id]=v;else delete m[id];localStorage.setItem('tapd_bigo',JSON.stringify(m))}catch(e){}}
 function drawCharts(F){
 if(typeof Chart==='undefined')return;
-// Daily trend
+// === 1. 일일 버그 추세 (HUN 전체 기준, 최근 30일) ===
 const last30=[];const now=new Date();
 for(let i=29;i>=0;i--){const d=new Date(now);d.setDate(d.getDate()-i);last30.push(d.toISOString().substring(0,10))}
 const dayData={};last30.forEach(d=>{dayData[d]={total:0,active:0,closed:0}});
-F.forEach(b=>{const c=(b.created||'').substring(0,10);if(dayData[c]){dayData[c].total++;const st=(b.status||'').toLowerCase();if(st==='new'||st==='in_progress'||st==='reopened')dayData[c].active++;if(st==='closed')dayData[c].closed++}});
+// 전체 HUN 버그 기준 (필터 무관)
+HB.forEach(b=>{const c=(b.created||'').substring(0,10);if(dayData[c]){dayData[c].total++;const st=(b.status||'').toLowerCase();if(st==='new'||st==='in_progress'||st==='reopened')dayData[c].active++;if(st==='closed')dayData[c].closed++}});
 const labels=last30.map(d=>{const m=d.substring(5,7);const day=d.substring(8,10);return m+'/'+day});
 const totals=last30.map(d=>dayData[d].total);
 const actives=last30.map(d=>dayData[d].active);
 const closeds=last30.map(d=>dayData[d].closed);
-var ctx1=document.getElementById('dailyTrend');if(ctx1){if(window._dtChart)window._dtChart.destroy();window._dtChart=new Chart(ctx1,{type:'bar',data:{labels:labels,datasets:[{label:'신규',data:totals,backgroundColor:'rgba(102,126,234,.6)',borderColor:'#667eea',borderWidth:.5,borderRadius:2},{label:'미해결',data:actives,backgroundColor:'rgba(250,112,154,.6)',borderColor:'#fa709a',borderWidth:.5,borderRadius:2},{label:'종료',data:closeds,backgroundColor:'rgba(17,153,142,.6)',borderColor:'#11998e',borderWidth:.5,borderRadius:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:10,family:'Noto Sans KR'},boxWidth:12,usePointStyle:true}}},scales:{x:{grid:{display:false},ticks:{font:{size:8,family:'Noto Sans KR'},maxRotation:60,minRotation:60}},y:{beginAtZero:true,ticks:{font:{size:9,family:'Noto Sans KR'},stepSize:1}}}}})}
-// Status distribution
-var stCnt={};F.forEach(b=>{const s=(b.status||'').toLowerCase();stCnt[s]=(stCnt[s]||0)+1});
-var sKl={new:'신규',in_progress:'진행중',reopened:'재오픈',resolved:'해결됨',verified:'검증완료',rejected:'반려',suspended:'보류',closed:'종료'};
-var stLabels=[],stValues=[];Object.entries(stCnt).sort((a,b)=>b[1]-a[1]).forEach(([k,v])=>{stLabels.push(sKl[k]||k);stValues.push(v)});
-var ctx2=document.getElementById('statusDist');if(ctx2){if(window._stChart)window._stChart.destroy();window._stChart=new Chart(ctx2,{type:'doughnut',data:{labels:stLabels,datasets:[{data:stValues,backgroundColor:['#667eea','#fa709a','#f093fb','#4facfe','#11998e','#fbc2eb','#fee140','#a18cd1'],borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:9,family:'Noto Sans KR'},boxWidth:10,usePointStyle:true,padding:6}}},cutout:'50%'}})}
-// Severity distribution
-var svCnt={};F.forEach(b=>{const se=(b.severity||'').toLowerCase();if(se.includes('fatal')||se.includes('critical'))svCnt['치명']=(svCnt['치명']||0)+1;else if(se.includes('serious')||se.includes('major'))svCnt['심각']=(svCnt['심각']||0)+1;else svCnt['일반']=(svCnt['일반']||0)+1});
-var svLabels=Object.keys(svCnt);var svValues=Object.values(svCnt);
-var ctx3=document.getElementById('severeDist');if(ctx3){if(window._svChart)window._svChart.destroy();window._svChart=new Chart(ctx3,{type:'doughnut',data:{labels:svLabels,datasets:[{data:svValues,backgroundColor:['#dc3545','#fd7e14','#6c757d'],borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:9,family:'Noto Sans KR'},boxWidth:10,usePointStyle:true,padding:6}}},cutout:'50%'}})}
+var ctx1=document.getElementById('dailyTrend');if(ctx1){if(window._dtChart)window._dtChart.destroy();window._dtChart=new Chart(ctx1,{type:'bar',data:{labels:labels,datasets:[{label:'신규 생성',data:totals,backgroundColor:'rgba(102,126,234,.6)',borderColor:'#667eea',borderWidth:.5,borderRadius:2,order:2},{label:'미해결',data:actives,backgroundColor:'rgba(250,112,154,.6)',borderColor:'#fa709a',borderWidth:.5,borderRadius:2,order:3},{label:'종료',data:closeds,backgroundColor:'rgba(17,153,142,.6)',borderColor:'#11998e',borderWidth:.5,borderRadius:2,order:3},{label:'누적',data:totals.reduce((a,v,i)=>{a.push((a[i-1]||0)+v);return a},[]),type:'line',borderColor:'#667eea',borderWidth:2,pointRadius:0,tension:.3,fill:false,order:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:10,family:'Noto Sans KR'},boxWidth:12,usePointStyle:true}}},scales:{x:{grid:{display:false},ticks:{font:{size:8,family:'Noto Sans KR'},maxRotation:60,minRotation:60}},y:{beginAtZero:true,ticks:{font:{size:9,family:'Noto Sans KR'},stepSize:1}}}}})}
+
+// === 버전 분류 유틸 ===
+function getMajorVer(vf){if(!vf)return null;const m=vf.match(/[\d]+\.[\d]+/);return m?m[0]:null}
+function verGroup(v){const m=getMajorVer(v);if(!m)return null;const major=m.split('.')[0];const minor=m.split('.')[1];return major+'.'+minor}
+const VERSIONS=['1.0','1.1','1.2','1.3','1.4','1.5','1.6'];
+const VER_COLORS={'1.0':'#6c757d','1.1':'#667eea','1.2':'#4facfe','1.3':'#11998e','1.4':'#fd7e14','1.5':'#dc3545','1.6':'#a18cd1'};
+function verColor(v){return VER_COLORS[v]||'#999'}
+
+// === 2. 버전별 상태 분포 (v1.1~v1.5) ===
+const stKeys=['closed','resolved','verified','new','in_progress','reopened','rejected','suspended'];
+const stKl={new:'신규',in_progress:'진행중',reopened:'재오픈',resolved:'해결됨',verified:'검증완료',rejected:'반려',suspended:'보류',closed:'종료'};
+const verStData={};VERSIONS.forEach(v=>{verStData[v]={};stKeys.forEach(s=>{verStData[v][s]=0})});
+HB.forEach(b=>{const vg=verGroup(b.version_fix||'');if(!vg)return;const s=(b.status||'').toLowerCase();if(verStData[vg]&&verStData[vg][s]!==undefined)verStData[vg][s]++});
+const showVers=VERSIONS.filter(v=>v>='1.1'&&v<='1.5');
+const stDatasets=stKeys.map(s=>({label:stKl[s]||s,data:showVers.map(v=>verStData[v][s]),backgroundColor:'rgba('+[{new:'102,126,234'},{in_progress:'250,112,154'},{reopened:'240,93,243'},{resolved:'79,172,254'},{verified:'17,153,142'},{rejected:'251,224,64'},{suspended:'161,140,209'},{closed:'108,117,125'}].find(x=>x[s])||'150,150,150').join(',')+',0.7)',borderColor:'rgba('+[{new:'102,126,234'},{in_progress:'250,112,154'},{reopened:'240,93,243'},{resolved:'79,172,254'},{verified:'17,153,142'},{rejected:'251,224,64'},{suspended:'161,140,209'},{closed:'108,117,125'}].find(x=>x[s])||'150,150,150').join(',')+',1)',borderWidth:1}));
+var ctx2=document.getElementById('statusByVersion');if(ctx2){if(window._sbvChart)window._sbvChart.destroy();window._sbvChart=new Chart(ctx2,{type:'bar',data:{labels:showVers.map(v=>'v'+v),datasets:stDatasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:9,family:'Noto Sans KR'},boxWidth:10,usePointStyle:true,padding:4}}},scales:{x:{stacked:true,grid:{display:false},ticks:{font:{size:9,family:'Noto Sans KR'}}},y:{stacked:true,beginAtZero:true,ticks:{font:{size:9,family:'Noto Sans KR'}}}}}})}
+
+// === 3. 버전별 심각도 분포 (v1.1~v1.5) ===
+const svKeys=['일반','심각','치명'];
+const svColors={'일반':'#6c757d','심각':'#fd7e14','치명':'#dc3545'};
+const verSvData={};VERSIONS.forEach(v=>{verSvData[v]={};svKeys.forEach(s=>{verSvData[v][s]=0})});
+HB.forEach(b=>{const vg=verGroup(b.version_fix||'');if(!vg)return;const se=(b.severity||'').toLowerCase();let sk='일반';if(se.includes('fatal')||se.includes('critical'))sk='치명';else if(se.includes('serious')||se.includes('major'))sk='심각';if(verSvData[vg])verSvData[vg][sk]++});
+const svDatasets=svKeys.map(s=>({label:s,data:showVers.map(v=>verSvData[v][s]),backgroundColor:svColors[s]+'b3',borderColor:svColors[s],borderWidth:1}));
+var ctx3=document.getElementById('sevByVersion');if(ctx3){if(window._svbvChart)window._svbvChart.destroy();window._svbvChart=new Chart(ctx3,{type:'bar',data:{labels:showVers.map(v=>'v'+v),datasets:svDatasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:9,family:'Noto Sans KR'},boxWidth:10,usePointStyle:true,padding:4}}},scales:{x:{stacked:true,grid:{display:false},ticks:{font:{size:9,family:'Noto Sans KR'}}},y:{stacked:true,beginAtZero:true,ticks:{font:{size:9,family:'Noto Sans KR'}}}}}})}
+
+// === 4. 버전별 HUN TAPD 총량 추이 ===
+const verTotals={};VERSIONS.forEach(v=>{verTotals[v]=0});
+HB.forEach(b=>{const vg=verGroup(b.version_fix||'');if(vg&&verTotals[vg]!==undefined)verTotals[vg]++});
+// 미지정/기타도 추가
+let unassigned=0;
+HB.forEach(b=>{if(!verGroup(b.version_fix||''))unassigned++});
+const vLabels=VERSIONS.map(v=>'v'+v);
+const vData=VERSIONS.map(v=>verTotals[v]);
+const vColors=VERSIONS.map(v=>verColor(v));
+const vCumul=vData.reduce((a,v)=>{a.push((a[a.length-1]||0)+v);return a},[]);
+var ctx4=document.getElementById('versionTrend');if(ctx4){if(window._vtChart)window._vtChart.destroy();window._vtChart=new Chart(ctx4,{type:'bar',data:{labels:vLabels,datasets:[{label:'버전당 TAPD 수',data:vData,backgroundColor:vColors.map(c=>c+'99'),borderColor:vColors,borderWidth:2,borderRadius:4,order:2},{label:'누적',data:vCumul,type:'line',borderColor:'#667eea',borderWidth:2,pointBackgroundColor:vColors,pointRadius:5,tension:.2,fill:false,order:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:10,family:'Noto Sans KR'},boxWidth:12,usePointStyle:true}},tooltip:{callbacks:{afterLabel:function(ctx){const total=HB.length;const pct=total?((ctx.raw/total)*100).toFixed(1):0;return ctx.raw+'건 ('+pct+'%)'}}}},scales:{x:{grid:{display:false},ticks:{font:{size:10,family:'Noto Sans KR'}}},y:{beginAtZero:true,ticks:{font:{size:9,family:'Noto Sans KR'}}}}}})}
 }
 function detCh(){
 if(FT){PREV={};HB.forEach(b=>{PREV[b.id]=b.status||''});FT=false;return}
