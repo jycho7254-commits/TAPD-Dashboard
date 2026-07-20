@@ -148,38 +148,38 @@ const closeds=last30.map(d=>dayData[d].closed);
 var ctx1=document.getElementById('dailyTrend');if(ctx1){if(window._dtChart)window._dtChart.destroy();window._dtChart=new Chart(ctx1,{type:'bar',data:{labels:labels,datasets:[{label:'신규 생성',data:totals,backgroundColor:'rgba(102,126,234,.6)',borderColor:'#667eea',borderWidth:.5,borderRadius:2,order:2},{label:'미해결',data:actives,backgroundColor:'rgba(250,112,154,.6)',borderColor:'#fa709a',borderWidth:.5,borderRadius:2,order:3},{label:'종료',data:closeds,backgroundColor:'rgba(17,153,142,.6)',borderColor:'#11998e',borderWidth:.5,borderRadius:2,order:3},{label:'누적',data:totals.reduce((a,v,i)=>{a.push((a[i-1]||0)+v);return a},[]),type:'line',borderColor:'#667eea',borderWidth:2,pointRadius:0,tension:.3,fill:false,order:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:10,family:'Noto Sans KR'},boxWidth:12,usePointStyle:true}}},scales:{x:{grid:{display:false},ticks:{font:{size:8,family:'Noto Sans KR'},maxRotation:60,minRotation:60}},y:{beginAtZero:true,ticks:{font:{size:9,family:'Noto Sans KR'},stepSize:1}}}}})}
 
 // === 버전 분류 유틸 ===
-function getMajorVer(vf){if(!vf)return null;const m=vf.match(/[\d]+\.[\d]+/);return m?m[0]:null}
-function verGroup(v){const m=getMajorVer(v);if(!m)return null;const major=m.split('.')[0];const minor=m.split('.')[1];return major+'.'+minor}
-const VERSIONS=['1.0','1.1','1.2','1.3','1.4','1.5','1.6'];
-const VER_COLORS={'1.0':'#6c757d','1.1':'#667eea','1.2':'#4facfe','1.3':'#11998e','1.4':'#fd7e14','1.5':'#dc3545','1.6':'#a18cd1'};
-function verColor(v){return VER_COLORS[v]||'#999'}
-
-// === 2. 버전별 상태 분포 (v1.1~v1.5) ===
+const ST_COLORS={new:'102,126,234',in_progress:'250,112,154',reopened:'240,93,243',resolved:'79,172,254',verified:'17,153,142',rejected:'251,224,64',suspended:'161,140,209',closed:'108,117,125'};
 const stKeys=['closed','resolved','verified','new','in_progress','reopened','rejected','suspended'];
 const stKl={new:'신규',in_progress:'진행중',reopened:'재오픈',resolved:'해결됨',verified:'검증완료',rejected:'반려',suspended:'보류',closed:'종료'};
-const verStData={};VERSIONS.forEach(v=>{verStData[v]={};stKeys.forEach(s=>{verStData[v][s]=0})});
-HB.forEach(b=>{const vg=verGroup(b.version_fix||'');if(!vg)return;const s=(b.status||'').toLowerCase();if(verStData[vg]&&verStData[vg][s]!==undefined)verStData[vg][s]++});
-const showVers=VERSIONS.filter(v=>v>='1.1'&&v<='1.5');
-const stDatasets=stKeys.map(s=>({label:stKl[s]||s,data:showVers.map(v=>verStData[v][s]),backgroundColor:'rgba('+[{new:'102,126,234'},{in_progress:'250,112,154'},{reopened:'240,93,243'},{resolved:'79,172,254'},{verified:'17,153,142'},{rejected:'251,224,64'},{suspended:'161,140,209'},{closed:'108,117,125'}].find(x=>x[s])||'150,150,150').join(',')+',0.7)',borderColor:'rgba('+[{new:'102,126,234'},{in_progress:'250,112,154'},{reopened:'240,93,243'},{resolved:'79,172,254'},{verified:'17,153,142'},{rejected:'251,224,64'},{suspended:'161,140,209'},{closed:'108,117,125'}].find(x=>x[s])||'150,150,150').join(',')+',1)',borderWidth:1}));
+const verStData={'1.1':{},'1.2':{},'1.3':{},'1.4':{},'1.5':{}};
+stKeys.forEach(s=>{['1.1','1.2','1.3','1.4','1.5'].forEach(v=>{verStData[v][s]=0})});
+HB.forEach(b=>{const vf=b.version_fix||'';const m=vf.match(/[\d]+\.[\d]+/);if(!m)return;const v=m[0];if(!verStData[v])return;const s=(b.status||'').toLowerCase();if(verStData[v][s]!==undefined)verStData[v][s]++});
+const showVers=['1.1','1.2','1.3','1.4','1.5'];
+const stDatasets=[];
+for(let si=0;si<stKeys.length;si++){
+const s=stKeys[si];
+const rgb=ST_COLORS[s]||'150,150,150';
+stDatasets.push({label:stKl[s]||s,data:showVers.map(v=>verStData[v][s]),backgroundColor:'rgba('+rgb+',0.7)',borderColor:'rgba('+rgb+',1)',borderWidth:1});
+}
 var ctx2=document.getElementById('statusByVersion');if(ctx2){if(window._sbvChart)window._sbvChart.destroy();window._sbvChart=new Chart(ctx2,{type:'bar',data:{labels:showVers.map(v=>'v'+v),datasets:stDatasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:9,family:'Noto Sans KR'},boxWidth:10,usePointStyle:true,padding:4}}},scales:{x:{stacked:true,grid:{display:false},ticks:{font:{size:9,family:'Noto Sans KR'}}},y:{stacked:true,beginAtZero:true,ticks:{font:{size:9,family:'Noto Sans KR'}}}}}})}
 
 // === 3. 버전별 심각도 분포 (v1.1~v1.5) ===
 const svKeys=['일반','심각','치명'];
 const svColors={'일반':'#6c757d','심각':'#fd7e14','치명':'#dc3545'};
-const verSvData={};VERSIONS.forEach(v=>{verSvData[v]={};svKeys.forEach(s=>{verSvData[v][s]=0})});
-HB.forEach(b=>{const vg=verGroup(b.version_fix||'');if(!vg)return;const se=(b.severity||'').toLowerCase();let sk='일반';if(se.includes('fatal')||se.includes('critical'))sk='치명';else if(se.includes('serious')||se.includes('major'))sk='심각';if(verSvData[vg])verSvData[vg][sk]++});
+const verSvData={'1.1':{},'1.2':{},'1.3':{},'1.4':{},'1.5':{}};
+svKeys.forEach(s=>{['1.1','1.2','1.3','1.4','1.5'].forEach(v=>{verSvData[v][s]=0})});
+HB.forEach(b=>{const vf=b.version_fix||'';const m=vf.match(/[\d]+\.[\d]+/);if(!m)return;const v=m[0];if(!verSvData[v])return;const se=(b.severity||'').toLowerCase();let sk='일반';if(se.includes('fatal')||se.includes('critical'))sk='치명';else if(se.includes('serious')||se.includes('major'))sk='심각';verSvData[v][sk]++});
 const svDatasets=svKeys.map(s=>({label:s,data:showVers.map(v=>verSvData[v][s]),backgroundColor:svColors[s]+'b3',borderColor:svColors[s],borderWidth:1}));
 var ctx3=document.getElementById('sevByVersion');if(ctx3){if(window._svbvChart)window._svbvChart.destroy();window._svbvChart=new Chart(ctx3,{type:'bar',data:{labels:showVers.map(v=>'v'+v),datasets:svDatasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:9,family:'Noto Sans KR'},boxWidth:10,usePointStyle:true,padding:4}}},scales:{x:{stacked:true,grid:{display:false},ticks:{font:{size:9,family:'Noto Sans KR'}}},y:{stacked:true,beginAtZero:true,ticks:{font:{size:9,family:'Noto Sans KR'}}}}}})}
 
-// === 4. 버전별 HUN TAPD 총량 추이 ===
-const verTotals={};VERSIONS.forEach(v=>{verTotals[v]=0});
-HB.forEach(b=>{const vg=verGroup(b.version_fix||'');if(vg&&verTotals[vg]!==undefined)verTotals[vg]++});
-// 미지정/기타도 추가
-let unassigned=0;
-HB.forEach(b=>{if(!verGroup(b.version_fix||''))unassigned++});
-const vLabels=VERSIONS.map(v=>'v'+v);
-const vData=VERSIONS.map(v=>verTotals[v]);
-const vColors=VERSIONS.map(v=>verColor(v));
+// === 4. 버전별 HUN TAPD 총량 추이 (v1.0~v1.6) ===
+const ALL_VER=['1.0','1.1','1.2','1.3','1.4','1.5','1.6'];
+const VC={'1.0':'#6c757d','1.1':'#667eea','1.2':'#4facfe','1.3':'#11998e','1.4':'#fd7e14','1.5':'#dc3545','1.6':'#a18cd1'};
+const verTotals={'1.0':0,'1.1':0,'1.2':0,'1.3':0,'1.4':0,'1.5':0,'1.6':0};
+HB.forEach(b=>{const vf=b.version_fix||'';const m=vf.match(/[\d]+\.[\d]+/);if(m&&verTotals[m[0]]!==undefined)verTotals[m[0]]++});
+const vLabels=ALL_VER.map(v=>'v'+v);
+const vData=ALL_VER.map(v=>verTotals[v]);
+const vColors=ALL_VER.map(v=>VC[v]||'#999');
 const vCumul=vData.reduce((a,v)=>{a.push((a[a.length-1]||0)+v);return a},[]);
 var ctx4=document.getElementById('versionTrend');if(ctx4){if(window._vtChart)window._vtChart.destroy();window._vtChart=new Chart(ctx4,{type:'bar',data:{labels:vLabels,datasets:[{label:'버전당 TAPD 수',data:vData,backgroundColor:vColors.map(c=>c+'99'),borderColor:vColors,borderWidth:2,borderRadius:4,order:2},{label:'누적',data:vCumul,type:'line',borderColor:'#667eea',borderWidth:2,pointBackgroundColor:vColors,pointRadius:5,tension:.2,fill:false,order:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:10,family:'Noto Sans KR'},boxWidth:12,usePointStyle:true}},tooltip:{callbacks:{afterLabel:function(ctx){const total=HB.length;const pct=total?((ctx.raw/total)*100).toFixed(1):0;return ctx.raw+'건 ('+pct+'%)'}}}},scales:{x:{grid:{display:false},ticks:{font:{size:10,family:'Noto Sans KR'}}},y:{beginAtZero:true,ticks:{font:{size:9,family:'Noto Sans KR'}}}}}})}
 }
