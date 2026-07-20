@@ -62,6 +62,7 @@ td a{color:#667eea;text-decoration:none}td a:hover{text-decoration:underline}
 <div class="card"><div class="card-title">📈 일일 버그 추세 (HUN 전체, 최근 30일)</div><div style="padding:8px;background:#f8f9fa;border-radius:8px;"><canvas id="dailyTrend" height="200"></canvas></div></div>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;"><div class="card" style="margin:0"><div class="card-title">📊 버전별 상태 분포 (v1.1~v1.5)</div><div style="padding:4px;"><canvas id="statusByVersion" height="200"></canvas></div></div><div class="card" style="margin:0"><div class="card-title">📊 버전별 심각도 분포 (v1.1~v1.5)</div><div style="padding:4px;"><canvas id="sevByVersion" height="200"></canvas></div></div></div>
 <div class="card"><div class="card-title">📈 버전별 HUN TAPD 총량 추이</div><div style="padding:8px;background:#f8f9fa;border-radius:8px;"><canvas id="versionTrend" height="200"></canvas></div></div>
+<div class="card"><div class="card-title">📊 버전별 결함 유형 추이</div><div style="padding:8px;background:#f8f9fa;border-radius:8px;"><canvas id="categoryTrend" height="200"></canvas></div></div>
 <div class="footer">TAPD API 실시간 · Trickcal_Revive · deepseek-v4-pro · http://192.168.4.139:8080</div>
 </div>
 <script>
@@ -145,11 +146,11 @@ const labels=last30.map(d=>{const m=d.substring(5,7);const day=d.substring(8,10)
 const totals=last30.map(d=>dayData[d].total);
 const actives=last30.map(d=>dayData[d].active);
 const closeds=last30.map(d=>dayData[d].closed);
-var ctx1=document.getElementById('dailyTrend');if(ctx1){if(window._dtChart)window._dtChart.destroy();window._dtChart=new Chart(ctx1,{type:'bar',data:{labels:labels,datasets:[{label:'신규 생성',data:totals,backgroundColor:'rgba(102,126,234,.6)',borderColor:'#667eea',borderWidth:.5,borderRadius:2,order:2},{label:'미해결',data:actives,backgroundColor:'rgba(250,112,154,.6)',borderColor:'#fa709a',borderWidth:.5,borderRadius:2,order:3},{label:'종료',data:closeds,backgroundColor:'rgba(17,153,142,.6)',borderColor:'#11998e',borderWidth:.5,borderRadius:2,order:3},{label:'누적',data:totals.reduce((a,v,i)=>{a.push((a[i-1]||0)+v);return a},[]),type:'line',borderColor:'#667eea',borderWidth:2,pointRadius:0,tension:.3,fill:false,order:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:10,family:'Noto Sans KR'},boxWidth:12,usePointStyle:true}}},scales:{x:{grid:{display:false},ticks:{font:{size:8,family:'Noto Sans KR'},maxRotation:60,minRotation:60}},y:{beginAtZero:true,ticks:{font:{size:9,family:'Noto Sans KR'},stepSize:1}}}}})}
+var ctx1=document.getElementById('dailyTrend');if(ctx1){if(window._dtChart)window._dtChart.destroy();window._dtChart=new Chart(ctx1,{type:'bar',data:{labels:labels,datasets:[{label:'신규 생성',data:totals,backgroundColor:'rgba(102,126,234,.6)',borderColor:'#667eea',borderWidth:.5,borderRadius:2,order:2},{label:'미해결',data:actives,backgroundColor:'rgba(250,112,154,.6)',borderColor:'#fa709a',borderWidth:.5,borderRadius:2,order:3},{label:'종료',data:closeds,backgroundColor:'rgba(17,153,142,.6)',borderColor:'#11998e',borderWidth:.5,borderRadius:2,order:3},{label:'누적',data:totals.reduce((a,v,i)=>{a.push((a[i-1]||0)+v);return a},[]),type:'line',borderColor:'#667eea',borderWidth:2,pointRadius:0,tension:.3,fill:false,order:1}]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'top',labels:{font:{size:10,family:'Noto Sans KR'},boxWidth:12,usePointStyle:true}},tooltip:{callbacks:{label:function(ctx){return ctx.dataset.label+': '+ctx.raw+'건'}}}},scales:{x:{grid:{display:false},ticks:{font:{size:8,family:'Noto Sans KR'},maxRotation:60,minRotation:60}},y:{beginAtZero:true,ticks:{font:{size:9,family:'Noto Sans KR'},stepSize:1}}}}})}
 
 // === 버전 분류 유틸 ===
 const ST_COLORS={new:'102,126,234',in_progress:'250,112,154',reopened:'240,93,243',resolved:'79,172,254',verified:'17,153,142',rejected:'251,224,64',suspended:'161,140,209',closed:'108,117,125'};
-const stKeys=['closed','resolved','verified','new','in_progress','reopened','rejected','suspended'];
+const stKeys=['closed','resolved','verified'];
 const stKl={new:'신규',in_progress:'진행중',reopened:'재오픈',resolved:'해결됨',verified:'검증완료',rejected:'반려',suspended:'보류',closed:'종료'};
 const verStData={'1.1':{},'1.2':{},'1.3':{},'1.4':{},'1.5':{}};
 stKeys.forEach(s=>{['1.1','1.2','1.3','1.4','1.5'].forEach(v=>{verStData[v][s]=0})});
@@ -182,6 +183,27 @@ const vData=ALL_VER.map(v=>verTotals[v]);
 const vColors=ALL_VER.map(v=>VC[v]||'#999');
 const vCumul=vData.reduce((a,v)=>{a.push((a[a.length-1]||0)+v);return a},[]);
 var ctx4=document.getElementById('versionTrend');if(ctx4){if(window._vtChart)window._vtChart.destroy();window._vtChart=new Chart(ctx4,{type:'bar',data:{labels:vLabels,datasets:[{label:'버전당 TAPD 수',data:vData,backgroundColor:vColors.map(c=>c+'99'),borderColor:vColors,borderWidth:2,borderRadius:4,order:2},{label:'누적',data:vCumul,type:'line',borderColor:'#667eea',borderWidth:2,pointBackgroundColor:vColors,pointRadius:5,tension:.2,fill:false,order:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:10,family:'Noto Sans KR'},boxWidth:12,usePointStyle:true}},tooltip:{callbacks:{afterLabel:function(ctx){const total=HB.length;const pct=total?((ctx.raw/total)*100).toFixed(1):0;return ctx.raw+'건 ('+pct+'%)'}}}},scales:{x:{grid:{display:false},ticks:{font:{size:10,family:'Noto Sans KR'}}},y:{beginAtZero:true,ticks:{font:{size:9,family:'Noto Sans KR'}}}}}})}
+
+// === 5. 버전별 결함 유형 추이 ===
+const CAT_RULES=[{label:'UI/디스플레이',kw:['UI','显示','界面','布局','按钮','弹窗','图标','头像','字体','颜色','图片','素材']},{label:'번역/로컬라이징',kw:['翻译','文本','语音','漏key','本地化','语言','BGM','音效']},{label:'시스템/기능',kw:['登录','签到','活动','任务','商店','抽卡','邮件','聊天','背包','装备','强化','成就','设置','PVP','PVE','组队','匹配','公会','好友','奖励','解锁','配置','引导']},{label:'전투/게임플레이',kw:['战斗','技能','特效','伤害','数值','关卡','副本','怪物','Boss']},{label:'리소스/모델',kw:['模型','穿模','动画','立绘','素材','资源','CG','镜头']},{label:'크래시/성능',kw:['闪退','Crash','crash','卡死','黑屏','白屏','内存','发热','掉帧','性能','报错','超时']}];
+function classifyBug(t){
+for(let i=0;i<CAT_RULES.length;i++){
+for(let j=0;j<CAT_RULES[i].kw.length;j++){
+if(t.indexOf(CAT_RULES[i].kw[j])>=0)return CAT_RULES[i].label;
+}
+}
+return '기타';
+}
+const catVerData={};
+CAT_RULES.forEach(r=>{catVerData[r.label]={};
+['1.0','1.1','1.2','1.3','1.4','1.5','1.6'].forEach(v=>{catVerData[r.label][v]=0})});
+catVerData['기타']={};
+['1.0','1.1','1.2','1.3','1.4','1.5','1.6'].forEach(v=>{catVerData['기타'][v]=0});
+HB.forEach(b=>{const vf=b.version_fix||'';const m=vf.match(/[\d]+\.[\d]+/);if(!m)return;const v=m[0];if(!catVerData['기타'][v]&&catVerData['기타'][v]!==0)return;const cat=classifyBug(b.title||'');if(catVerData[cat])catVerData[cat][v]++});
+const catLabels=CAT_RULES.map(r=>r.label).concat(['기타']);
+const catColors=['#667eea','#4facfe','#11998e','#fd7e14','#a18cd1','#dc3545','#6c757d'];
+const catDatasets=catLabels.map((cat,ci)=>({label:cat,data:ALL_VER.map(v=>catVerData[cat][v]||0),backgroundColor:catColors[ci]+'99',borderColor:catColors[ci],borderWidth:1.5,borderRadius:2}));
+var ctx5=document.getElementById('categoryTrend');if(ctx5){if(window._catChart)window._catChart.destroy();window._catChart=new Chart(ctx5,{type:'bar',data:{labels:vLabels,datasets:catDatasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:9,family:'Noto Sans KR'},boxWidth:10,usePointStyle:true,padding:4}},tooltip:{callbacks:{label:function(ctx){return ctx.dataset.label+': '+ctx.raw+'건'}}}},scales:{x:{stacked:true,grid:{display:false},ticks:{font:{size:9,family:'Noto Sans KR'}}},y:{stacked:true,beginAtZero:true,ticks:{font:{size:9,family:'Noto Sans KR'}}}}}})}
 }
 function detCh(){
 if(FT){PREV={};HB.forEach(b=>{PREV[b.id]=b.status||''});FT=false;return}
