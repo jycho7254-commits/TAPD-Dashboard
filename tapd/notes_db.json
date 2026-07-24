@@ -1,10 +1,6 @@
 {
   "test_bug_001": {
-    "text": "GitHub API 비고 테스트",
-    "updated_at": "2026-07-24 15:00:00"
-  },
-  "test_bug_002": {
-    "text": "공유 비고 확인",
-    "updated_at": "2026-07-24 15:01:00"
+    "text": "GitHub API 비고 공유 테스트!",
+    "updated_at": "2026-07-24 15:15:00"
   }
 }
