@@ -244,20 +244,24 @@ function tN(){NO=!NO;document.getElementById('p').classList.toggle('open',NO);do
 async function manualRefresh(){const rs=document.getElementById('rs');rs.textContent='🔄 TAPD 데이터 갱신 중...';
 try{
 FT=true;
-// GitHub Actions 동기화 트리거 (PAT 필요 — PAT 없으면 Actions만 실행 안 됨)
+// 1) Cloudflare proxy(live) 우선 시도
+let loaded=false;
+try{
+const pr=await fetch(PROXY+'?_='+Date.now(),{signal:AbortSignal.timeout(8000)});
+if(pr.ok){const raw=await pr.json();const rb=(raw.data||raw).filter(Boolean);
+if(rb.length>0){HB=rb.filter(b=>HF.some(f=>(b[f]||'').includes('HUN')));useProxy=true;loaded=true;
+rnd();rs.textContent='✅ 실시간 '+HB.length+'건 ('+new Date().toLocaleTimeString('ko-KR')+')';
+setTimeout(()=>{rs.textContent='마지막: '+new Date().toLocaleTimeString('ko-KR')},5000);}}
+}catch(pe){console.log('proxy 실패, GitHub 캐시로 폴백:',pe.message)}
+// 2) proxy 실패 시 GitHub Actions 트리거 + raw 캐시 폴백
+if(!loaded){
 fetch('https://api.github.com/repos/jycho7254-commits/TAPD-Dashboard/actions/workflows/tapd-sync.yml/dispatches',{method:'POST',headers:{'Accept':'application/vnd.github.v3+json','Authorization':'Bearer '}}).catch(()=>{});
-// raw.githubusercontent.com에서 최신 JSON 직접 가져오기 (캐시 무시)
 const resp=await fetch(RAW_URL+'?_='+Date.now());
-if(resp.ok){
-const raw=await resp.json();
-const rb=(raw.data||raw).filter(Boolean);
-HB=rb.filter(b=>HF.some(f=>(b[f]||'').includes('HUN')));
-rnd();
-rs.textContent='✅ '+HB.length+'건 로드 완료 ('+new Date().toLocaleTimeString('ko-KR')+')';
+if(resp.ok){const raw=await resp.json();const rb=(raw.data||raw).filter(Boolean);
+HB=rb.filter(b=>HF.some(f=>(b[f]||'').includes('HUN')));useProxy=false;
+rnd();rs.textContent='📦 캐시 '+HB.length+'건 (Actions 갱신 대기)';
 setTimeout(()=>{rs.textContent='마지막: '+new Date().toLocaleTimeString('ko-KR')},5000);
-}else{
-rs.textContent='❌ HTTP '+resp.status;
-}
+}else{rs.textContent='❌ HTTP '+resp.status;}}
 }catch(e){rs.textContent='❌ 오류: '+e.message}}
 let sec=10800;setInterval(()=>{sec--;if(sec<=0){sec=10800;ld()}},1000);
 ld();
