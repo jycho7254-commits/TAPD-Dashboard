@@ -133,26 +133,57 @@ const more=items.length>limit?'<tr><td colspan="9" style="text-align:center;colo
 return'<table><tr><th>ID</th><th>제목</th><th>상태</th><th>심각도</th><th>발견 버전</th><th>수정 버전</th><th>생성일</th><th>생성자</th><th>비고</th></tr>'+show.map(b=>{const id=b.id||'';const lk='https://www.tapd.cn/46691872/bugtrace/bugs/view?bug_id='+id;const st=(b.status||'').toLowerCase();const sr=(b.severity||'').toLowerCase();const cls=st==='new'?'style="background:#fff5f5"':'';const bgRaw=bgMap[id]||'';const bgVal=(typeof bgRaw==='object'?(bgRaw.text||''):bgRaw).replace(/"/g,'&quot;');return'<tr '+cls+'><td>'+id.slice(-7)+'</td><td><a href="'+lk+'" target="_blank">'+esc((b.title||'').substring(0,45))+'</a></td><td><span class="tg '+(st==='new'?'tn':st==='in_progress'||st==='reopened'?'tp':'tc')+'">'+(b.status||'-')+'</span></td><td><span class="tg '+(sr.includes('fatal')||sr.includes('critical')?'sf':sr.includes('serious')||sr.includes('major')?'ss':'sn')+'">'+(b.severity||'-')+'</span></td><td>'+(b.version_report||'-')+'</td><td>'+(b.version_fix||'-')+'</td><td>'+(b.created||'').substring(0,10)+'</td><td>'+(b.reporter||'-')+'</td><td><input class="bg-input" data-id="'+id+'" placeholder="-" onchange="saveBg(this.dataset.id,this.value)" value="'+bgVal+'"></td></tr>'}).join('')+more+'</table>'
 }
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
-// 비고 서버 — Cloudflare Tunnel (외부 접속) + localhost (로컬)
-const NOTE_SRV='https://plus-premium-trials-pubmed.trycloudflare.com';
+// 비고 저장 — GitHub Contents API 기반 (영구 공유, 터널 불필요) + 로컬 프록시 동시 저장
+// 08-21: trycloudflare 터널 다운으로 동료 비고 유실 문제 → GitHub 저장으로 전환
+const GH_TOKEN='ghp_5Zijy5GTVgMEGfzCQ9LRj3y0O';
+const GH_API='https://api.github.com/repos/jycho7254-commits/TAPD-Dashboard/contents/tapd/notes_db.json';
+const GH_RAW='https://raw.githubusercontent.com/jycho7254-commits/TAPD-Dashboard/master/tapd/notes_db.json';
+let ghNoteSha=null;
 function saveBg(id,v){
   BIGO[id]={text:v,updated_at:new Date().toISOString()};
   try{const m=JSON.parse(localStorage.getItem('tapd_bigo')||'{}');if(v)m[id]=v;else delete m[id];localStorage.setItem('tapd_bigo',JSON.stringify(m))}catch(e){}
-  // 서버에 저장 (토큰 불필요, 누구나 쓸 수 있음)
-  fetch(NOTE_SRV+'/api/notes/'+id,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:v})}).then(()=>{console.log('비고 저장됨')}).catch(e=>{console.log('서버 저장 실패, localStorage만 사용')});
+  // 1) 로컬 프록시 — 형 PC에서 직접 접속(http://localhost:8081)일 때만 시도
+  if(location.hostname==='localhost'||location.hostname==='127.0.0.1'){fetch('/api/notes/'+id,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:v})}).catch(()=>{});}
+  // 2) GitHub에 전체 비고 DB 저장 (영구 공유)
+  ghPushNotes();
+}
+let _ghPushTimer=null;
+function ghPushNotes(){
+  clearTimeout(_ghPushTimer);
+  _ghPushTimer=setTimeout(()=>{
+    const db={};Object.keys(BIGO).forEach(k=>{db[k]=BIGO[k]});
+    const body=JSON.stringify({message:'notes: update',content:btoa(unescape(encodeURIComponent(JSON.stringify(db)))),sha:ghNoteSha||undefined,branch:'master'},(k,val)=>val===undefined?undefined:val);
+    fetch(GH_API,{method:'PUT',headers:{'Authorization':'token '+GH_TOKEN,'Content-Type':'application/json'},body})
+      .then(r=>r.json()).then(d=>{if(d&&d.content)ghNoteSha=d.content.sha;console.log('비고 GitHub 저장됨')})
+      .catch(e=>console.log('GitHub 저장 실패:',e));
+  },800);
 }
 function ghLoadNotes(){
-  // 서버에서 비고 불러오기 (Cloudflare 터널)
-  fetch(NOTE_SRV+'/api/notes')
+  // 로컬 프록시는 localhost에서만 시도, 그 외(github.io)는 바로 GitHub에서
+  if(location.hostname==='localhost'||location.hostname==='127.0.0.1'){
+    fetch('/api/notes')
+      .then(r=>r.json())
+      .then(d=>{if(d&&d.data){Object.assign(BIGO,d.data);}ghPullNotes();})
+      .catch(()=>ghPullNotes());
+  }else{ghPullNotes();}
+}
+function ghPullNotes(){
+  // 2) GitHub에서 전체 로드 (동료 접근 경로 — 어디서든)
+  fetch(GH_RAW+'?t='+Date.now())
     .then(r=>r.json())
-    .then(d=>{if(d&&d.data){Object.assign(BIGO,d.data);BIGO_LOADED=true;tbl();}})
-    .catch(e=>{
-      // 서버 다운 시 GitHub 백업에서 로드
-      fetch('https://raw.githubusercontent.com/jycho7254-commits/TAPD-Dashboard/master/tapd/notes_db.json?t='+Date.now())
-        .then(r=>r.json())
-        .then(d=>{if(d&&typeof d==='object'){Object.assign(BIGO,d);BIGO_LOADED=true;tbl();}})
-        .catch(e2=>{try{Object.assign(BIGO,JSON.parse(localStorage.getItem('tapd_bigo')||'{}'));BIGO_LOADED=true;tbl();}catch(e3){}})
-    })
+    .then(d=>{if(d&&typeof d==='object'){
+      // GitHub와 로컬 병합 — updated_at 최신 우선
+      Object.keys(d).forEach(k=>{
+        const g=d[k],l=BIGO[k];
+        if(!l||(g.updated_at||'')>=(l.updated_at||''))BIGO[k]=g;
+      });
+      ghFetchSha();BIGO_LOADED=true;tbl();
+    }})
+    .catch(e=>{try{Object.assign(BIGO,JSON.parse(localStorage.getItem('tapd_bigo')||'{}'));BIGO_LOADED=true;tbl();}catch(e3){}});
+}
+function ghFetchSha(){
+  fetch(GH_API,{headers:{'Authorization':'token '+GH_TOKEN}})
+    .then(r=>r.json()).then(d=>{if(d&&d.sha)ghNoteSha=d.sha;}).catch(()=>{});
 }
 function drawCharts(F){
 if(typeof Chart==='undefined')return;
