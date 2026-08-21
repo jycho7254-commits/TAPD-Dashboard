@@ -168,16 +168,17 @@ function ghLoadNotes(){
   }else{ghPullNotes();}
 }
 function ghPullNotes(){
-  // 2) GitHub에서 전체 로드 (동료 접근 경로 — 어디서든)
-  fetch(GH_RAW+'?t='+Date.now())
+  // GitHub API에서 로드 (raw는 CDN 캐시 있음 — 항상 최신 보장)
+  fetch(GH_API,{headers:{'Authorization':'token '+GH_TOKEN}})
     .then(r=>r.json())
-    .then(d=>{if(d&&typeof d==='object'){
+    .then(j=>{if(j&&j.content){var d=JSON.parse(decodeURIComponent(escape(atob(j.content.replace(/
+/g,'')))));ghNoteSha=j.sha;
       // GitHub와 로컬 병합 — updated_at 최신 우선
       Object.keys(d).forEach(k=>{
         const g=d[k],l=BIGO[k];
         if(!l||(g.updated_at||'')>=(l.updated_at||''))BIGO[k]=g;
       });
-      ghFetchSha();BIGO_LOADED=true;tbl();
+      BIGO_LOADED=true;tbl();
     }})
     .catch(e=>{try{Object.assign(BIGO,JSON.parse(localStorage.getItem('tapd_bigo')||'{}'));BIGO_LOADED=true;tbl();}catch(e3){}});
 }
